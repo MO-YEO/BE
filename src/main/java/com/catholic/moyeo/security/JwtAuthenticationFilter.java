@@ -95,13 +95,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            } catch (Exception e) {
-
-                SecurityContextHolder.clearContext();
-            }
+            }  catch (Exception e) {
+            System.out.println("JWT 인증 실패: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            SecurityContextHolder.clearContext();
         }
+
+    }
 
         // 다음 필터로 요청 전달
         filterChain.doFilter(request, response);
     }
+
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+
+        return path.equals("/")
+                || path.startsWith("/oauth2/")
+                || path.startsWith("/login/")
+                || path.startsWith("/oauth/")
+                || path.equals("/oauth/callback");
+    }
+
 }

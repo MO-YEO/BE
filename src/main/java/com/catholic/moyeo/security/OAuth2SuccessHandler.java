@@ -31,6 +31,7 @@ import java.io.IOException;
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final MemberRepository memberRepository;
+    private final CookieProps cookieProps;
 
     // JWT 토큰 생성기
     private final JwtProvider jwtProvider;
@@ -97,8 +98,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
          */
         ResponseCookie cookie = ResponseCookie.from("access_token", token)
                 .httpOnly(true)
-                .secure(false)      // 배포 환경에서는 true 필수
-                .sameSite("Lax")    // 기본적인 CSRF 방어
+                .secure(cookieProps.isSecure())
+                .sameSite(cookieProps.getSameSite())
+
                 .path("/")
                 .maxAge(jwtProvider.getAccessExpMs() / 1000)
 
