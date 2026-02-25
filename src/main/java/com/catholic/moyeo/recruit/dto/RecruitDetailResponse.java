@@ -15,7 +15,7 @@ import java.util.List;
  *
  * NOTE(팀 공유 / API-ERD 불일치):
  * - roles/contact/studyDetail 등은 ERD에 없으므로 MVP에서는 제외한다.
- * - author 닉네임은 user_profile에서 조인/조회해서 내려준다. (닉네임 필수 정책)
+ * - author 닉네임은 user_profile에서 조인/조회해서 내려준다.
  */
 public class RecruitDetailResponse {
 

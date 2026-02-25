@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 모집글 수정 요청 (MVP)
+ * 모집글 수정 요청
  * - null 필드는 미수정
  *
  * 수정 가능 필드(ERD 기반):

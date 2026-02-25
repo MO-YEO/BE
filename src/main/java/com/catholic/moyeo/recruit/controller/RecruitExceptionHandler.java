@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Recruit 전용 예외 핸들러 (MVP)
+ * Recruit 전용 예외 핸들러
  *
  * 정책:
  * - 잘못된 요청/행위 불가 → 400

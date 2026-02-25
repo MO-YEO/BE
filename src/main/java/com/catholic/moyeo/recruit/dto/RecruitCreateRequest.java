@@ -8,12 +8,12 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 모집글 생성 요청 (MVP)
+ * 모집글 생성 요청
  *
  * 정책(중요):
- * - author_user_id는 서버에서 인증 주체(memberId)로 채운다. (클라에서 받지 않음)
- * - status는 항상 OPEN으로 시작한다. (클라에서 받지 않음)
- * - applicant_count는 작성자 포함 1로 시작한다. (클라에서 받지 않음)
+ * - author_user_id는 서버에서 인증 주체(memberId)로 채운다.
+ * - status는 항상 OPEN으로 시작한다.
+ * - applicant_count는 작성자 포함 1로 시작한다.
  *
  * 값 고정:
  * - type/category는 허용 값 고정 대상. DTO에서는 String으로 받고 서비스에서 검증 후 400 처리한다.

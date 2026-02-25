@@ -12,7 +12,6 @@ import jakarta.validation.constraints.NotNull;
  *
  * NOTE(팀 공유):
  * - 컨트롤러/DTO에서 APPLIED를 막지 말고, 서비스에서 최종 검증하여 400 처리하는 방식으로 통일한다.
- *   (이유: 메시지 통일 / 정책 변경 시 영향 최소화)
  */
 public class ApplicationDecisionRequest {
 

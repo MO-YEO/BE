@@ -11,9 +11,6 @@ import java.util.List;
 /**
  * 내가 지원한 모집글 목록 아이템
  *
- * API 기준:
- * - skills[] 키로 내려주는 형태가 일반적이므로 필드명을 skills로 통일한다.
- *
  * NOTE(팀 공유):
  * - applicationStatus는 recruit_application.status를 그대로 내려준다.
  * - 취소는 row 삭제라서, "내가 지원한 목록"에는 row가 존재하는 것만 조회된다.

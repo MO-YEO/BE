@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * - CLOSED 상태의 모집글에서는 취소(삭제) 불가(서비스에서 IllegalStateException)
  *
  * NOTE(팀 공유):
- * - 관계(@ManyToOne)로 매핑하지 않고 FK 값(Long)만 보관한다. (MVP 단순화)
+ * - 관계(@ManyToOne)로 매핑하지 않고 FK 값(Long)만 보관한다.
  * - 따라서 post 조회/검증은 서비스에서 recruitPostId로 별도 조회해야 한다.
  */
 @Entity

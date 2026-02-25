@@ -23,13 +23,6 @@ import java.util.stream.Collectors;
 public class RecruitService {
 
     /**
-     * =========================
-     * Recruit MVP 정책(팀 공유, Service가 기준)
-     * =========================
-     *
-     * [ERD vs API 혼동 시]
-     * - 본 MVP 구현은 "API 명세" 우선.
-     *
      * [식별자]
      * - memberId == user_id == app_user_id (공유 PK)
      * - 인증 주체는 AuthUtil.currentMemberId()로 얻는다.
@@ -163,7 +156,7 @@ public class RecruitService {
                 ));
             }
 
-            // skills OR LIKE (MVP)
+            // skills OR LIKE
             if (skills != null && !skills.isEmpty()) {
                 List<Predicate> orLikes = new ArrayList<>();
                 for (String s : skills) {
@@ -348,9 +341,7 @@ public class RecruitService {
 
             locked.decreaseApplicantCount();
 
-            // 참여 인원이 줄었으면 OPEN으로 되돌릴지 여부는 정책 선택인데,
-            // 현재 MVP 정책은 "자동 CLOSED 전환"만 확정이고, reopen은 명세에 없음.
-            // 따라서 CLOSED 유지(작성자가 status 변경으로 제어).
+            // CLOSED 전환 후 참여 인원이 줄어도 CLOSED 상태 유지 (작성자가 status 변경으로 제어).
         }
 
         appRepo.delete(app);

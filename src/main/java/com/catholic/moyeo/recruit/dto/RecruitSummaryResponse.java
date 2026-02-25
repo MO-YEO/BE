@@ -8,12 +8,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 모집글 목록(Summary) 응답 (MVP)
+ * 모집글 목록(Summary) 응답
  *
  * API 기준:
  * - recruits[] { recruitId, title, type, status, skills[], appliedByMe, applicantCount }
  *
- * applicantCount 정의(확정):
  * - recruit_post.applicant_count (작성자 포함 현재 참여 인원)
  */
 public class RecruitSummaryResponse {
