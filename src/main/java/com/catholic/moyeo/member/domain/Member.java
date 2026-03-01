@@ -45,7 +45,25 @@ public class Member {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    //추가했음
+    @Column(nullable = false, length = 30)
+    private String nickname;
 
+    @Column(length = 20)
+    private String role;
+
+    @Column(length = 200)
+    private String intro;
+
+    @Column(name = "github_url")
+    private String githubUrl;
+
+    @Column(name = "profile_image_url")
+    private String profileImageUrl;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private Department department;
 
     protected Member() {}
 
@@ -57,6 +75,19 @@ public class Member {
     }
 
     public static Member createGoogle(String sub, String email, boolean verified) {
-        return new Member("google", sub, email, verified);
+        Member member = new Member("google", sub, email, verified);
+
+        String base = email.contains("@") ? email.substring(0, email.indexOf("@")) : email;
+        member.nickname = base.length() > 30 ? base.substring(0, 30) : base;
+
+        return member;
+    }
+
+    public void updateProfile(String nickname, String role, String intro, String githubUrl, Department department) {
+        if (nickname != null) this.nickname = nickname;
+        if (role != null) this.role = role;
+        if (intro != null) this.intro = intro;
+        if (githubUrl != null) this.githubUrl = githubUrl;
+        if (department != null) this.department = department;
     }
 }
