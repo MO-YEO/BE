@@ -9,18 +9,25 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * MemberRepository 기반 RecruitMemberReader 구현체
+ * Member 기반 RecruitMemberReader 구현체
  *
- * 정책:
- * - Recruit 모듈은 Member 전체 정보를 보관하지 않고 memberId(userId)만 참조한다.
- * - 응답 시점에 Member를 조회해 author / applicant 응답을 조합한다.
- * - local 환경이 아닐 때 사용되는 실제 구현체다.
+ * 역할:
+ * - Recruit 모듈에서 memberId(userId)를 기반으로 Member 정보를 조회한다.
+ * - 조회된 Member 정보를 Recruit API 응답 DTO로 변환한다.
  *
- * NOTE:
- * - 현재 recruit 단독 개발 단계에서는 Member 도메인이 완전히 연동되지 않았을 수 있다.
- * - 따라서 이 구현체는 "컴파일 가능"하고 "최소한의 값 반환"에 초점을 둔다.
- * - local 테스트에서는 MockRecruitMemberReader가 실제로 사용된다.
- * - Member 연동 완료 후 nickname / departmentName 을 실제 값으로 교체하면 된다.
+ * 설계 배경:
+ * - Recruit 모듈은 Member 엔티티를 직접 참조하지 않는다.
+ * - 대신 recruit_post, recruit_application에는 userId(memberId)만 저장된다.
+ * - 응답 생성 시점에 MemberRepository를 통해 실제 회원 정보를 조회하여
+ *   author / applicant DTO를 조합한다.
+ *
+ * 사용 위치:
+ * - RecruitService
+ *   - 모집글 작성자(author) 정보 조회
+ *   - 지원자(applicant) 정보 조회
+ *
+ * Profile 정책:
+ * - local 환경을 제외한 모든 환경(dev, prod 등)에서 사용된다.
  */
 @Component
 @Profile("!local")
@@ -33,43 +40,42 @@ public class MemberRecruitReader implements RecruitMemberReader {
         this.memberRepository = memberRepository;
     }
 
+    /**
+     * 모집글 작성자 정보 조회
+     *
+     * 반환 필드:
+     * - memberId
+     * - nickname
+     * - departmentName
+     */
     @Override
     public RecruitAuthorResponse getAuthor(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Member not found: " + memberId));
 
-        /*
-         * 현재 Member 연동 전 단계이므로
-         * nickname / departmentName 은 임시값으로 내려준다.
-         *
-         * TODO:
-         * - member.getNickname()
-         * - member.getDepartment() != null ? member.getDepartment().getName() : null
-         * 로 교체
-         */
         return new RecruitAuthorResponse(
                 member.getId(),
-                "TEMP_NICKNAME",
-                null
+                member.getNickname(),
+                member.getDepartment() != null ? member.getDepartment().getName() : null
         );
     }
 
+    /**
+     * 지원자 정보 조회
+     *
+     * 반환 필드:
+     * - memberId
+     * - nickname
+     * - contactEmail
+     */
     @Override
     public ApplicationResponse.Applicant getApplicant(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Member not found: " + memberId));
 
-        /*
-         * 현재 Member 연동 전 단계이므로
-         * nickname 은 임시값,
-         * contactEmail 은 Member.email 을 사용한다.
-         *
-         * TODO:
-         * - nickname 을 member.getNickname() 으로 교체
-         */
         return new ApplicationResponse.Applicant(
                 member.getId(),
-                "TEMP_NICKNAME",
+                member.getNickname(),
                 member.getEmail()
         );
     }
