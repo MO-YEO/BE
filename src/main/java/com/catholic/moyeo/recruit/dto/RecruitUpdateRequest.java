@@ -1,5 +1,7 @@
 package com.catholic.moyeo.recruit.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
@@ -7,14 +9,22 @@ import java.util.List;
 
 /**
  * 모집글 수정 요청
- * - null 필드는 미수정
  *
- * 수정 가능 필드(ERD 기반):
- * - type, category, tag(표시용), title, content, skills(required_skills), totalHeadcount, deadline
+ * API 명세 body(optional):
+ * - type
+ * - category
+ * - tag
+ * - title
+ * - content
+ * - skills
+ * - totalHeadcount
+ * - deadline
  *
  * 정책:
- * - totalHeadcount를 applicantCount보다 작게 줄이려 하면 400 (서비스에서 검증)
- * - type/category 값 고정은 서비스에서 검증 후 400
+ * - null 필드는 수정하지 않는다.
+ * - type/category 허용값 검증은 서비스에서 수행한다.
+ * - totalHeadcount는 값이 들어온 경우 1 이상이어야 한다.
+ * - totalHeadcount를 applicantCount보다 작게 줄이는 것은 서비스에서 400 처리한다.
  */
 public class RecruitUpdateRequest {
 
@@ -32,8 +42,10 @@ public class RecruitUpdateRequest {
 
     private String content;
 
-    private List<String> skills;
+    @Valid
+    private List<@Size(max = 50) String> skills;
 
+    @Min(1)
     private Integer totalHeadcount;
 
     private LocalDate deadline;

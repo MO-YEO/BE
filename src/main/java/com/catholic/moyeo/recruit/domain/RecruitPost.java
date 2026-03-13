@@ -13,13 +13,23 @@ import java.time.LocalDateTime;
  * - deadline 지난 경우: 서비스에서 행위 시점에 차단(400). (스케줄러로 CLOSED 처리하는 건 선택)
  *
  * 값 고정 정책(중요):
- * - type/category/status는 "허용 값 고정" 대상이지만, DB는 VARCHAR 유지(MVP).
- * - 따라서 엔티티는 String을 유지하고, 서비스에서 Enum 파싱/검증으로 400 처리한다.
+ * - type/category는 "허용 값 고정" 대상이지만, DB는 VARCHAR 유지
+ * - 따라서 엔티티는 String을 유지하고, 서비스에서 허용 값 검증/정규화 후 저장한다.
+ *
+ * 상태 정책(중요):
+ * - status는 OPEN/CLOSED 고정값이다.
+ * - DB는 Enum STRING으로 저장한다.
+ * - 서비스에서 String -> Enum 파싱/검증 후 setStatus 한다.
  *
  * tag 정책(중요):
  * - tag는 표시만 한다. (필터/검색 X)
- * - ERD 상 tag는 VARCHAR(50) 단일 컬럼이므로 CSV 다중 태그는 MVP 범위를 벗어난다.
  *   (추후 다중 태그가 필요하면 ERD 변경 + 테이블 분리 등 재설계 필요)
+ *
+ * 도메인 방어 정책(추가):
+ * - total_headcount는 1 이상이어야 한다.
+ * - total_headcount는 applicant_count보다 작아질 수 없다.
+ * - applicant_count 증가 시 정원 초과는 허용하지 않는다.
+ * - applicant_count 감소 시 작성자 포함 정책상 최소 1을 유지한다.
  */
 @Entity
 @Table(name = "recruit_post")
@@ -41,7 +51,7 @@ public class RecruitPost {
 
     /**
      * 표시용 단일 태그 (예: "AfterEffects")
-     * - 검색/필터 파라미터에서는 사용하지 않음(MVP)
+     * - 검색/필터 파라미터에서는 사용하지 않음
      */
     @Column(name = "tag", length = 50)
     private String tag;
@@ -109,7 +119,7 @@ public class RecruitPost {
         this.createdAt = now;
         this.updatedAt = now;
 
-        // MVP 방어 로직 (최소한의 무결성 보장)
+        // 방어 로직 (최소한의 무결성 보장)
         if (this.status == null) this.status = RecruitPostStatus.OPEN;
         if (this.totalHeadcount <= 0) this.totalHeadcount = 1;
 
@@ -147,15 +157,56 @@ public class RecruitPost {
     public void setContent(String content) { this.content = content; }
     public void setRequiredSkills(String requiredSkills) { this.requiredSkills = requiredSkills; }
     public void setStatus(RecruitPostStatus status) { this.status = status; }
-    public void setTotalHeadcount(short totalHeadcount) { this.totalHeadcount = totalHeadcount; }
-    public void setDeadline(LocalDate deadline) { this.deadline = deadline; }
 
-    public void increaseApplicantCount() {
-        if (this.applicantCount < this.totalHeadcount) this.applicantCount++;
+    /**
+     * total_headcount 변경
+     *
+     * 정책:
+     * - 1 이상이어야 한다.
+     * - applicant_count보다 작아질 수 없다.
+     *
+     * NOTE:
+     * - 서비스에서도 동일 검증을 수행하지만,
+     *   엔티티에서도 한 번 더 방어해 도메인 정합성을 유지한다.
+     */
+    public void setTotalHeadcount(short totalHeadcount) {
+        if (totalHeadcount <= 0) {
+            throw new IllegalArgumentException("totalHeadcount must be positive");
+        }
+        if (totalHeadcount < this.applicantCount) {
+            throw new IllegalArgumentException("totalHeadcount cannot be less than applicantCount");
+        }
+        this.totalHeadcount = totalHeadcount;
     }
 
+    public void setDeadline(LocalDate deadline) { this.deadline = deadline; }
+
+    /**
+     * 참여 인원 증가
+     *
+     * 정책:
+     * - ACCEPTED 전환 시에만 서비스에서 호출한다.
+     * - 정원 초과는 허용하지 않는다.
+     *
+     * NOTE:
+     * - 서비스에서 정원 체크를 먼저 수행하지만,
+     *   도메인에서도 한 번 더 방어하여 실수성 호출을 막는다.
+     */
+    public void increaseApplicantCount() {
+        if (this.applicantCount >= this.totalHeadcount) {
+            throw new IllegalStateException("Recruit is full");
+        }
+        this.applicantCount++;
+    }
+
+    /**
+     * 참여 인원 감소
+     *
+     * 정책:
+     * - ACCEPTED 상태 지원 row 삭제 또는 ACCEPTED -> REJECTED 전환 시 사용된다.
+     * - 작성자 포함 정책상 최소 1 밑으로 내려갈 수 없다.
+     */
     public void decreaseApplicantCount() {
-        // 정책상 작성자 포함이므로 최소 1
         if (this.applicantCount > 1) this.applicantCount--;
     }
 

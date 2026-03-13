@@ -1,5 +1,7 @@
 package com.catholic.moyeo.recruit.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -10,25 +12,32 @@ import java.util.List;
 /**
  * 모집글 생성 요청
  *
- * 정책(중요):
- * - author_user_id는 서버에서 인증 주체(memberId)로 채운다.
- * - status는 항상 OPEN으로 시작한다.
- * - applicant_count는 작성자 포함 1로 시작한다.
+ * API 명세 body:
+ * - type
+ * - category
+ * - tag
+ * - title
+ * - content
+ * - skills
+ * - totalHeadcount
+ * - deadline
  *
- * 값 고정:
- * - type/category는 허용 값 고정 대상. DTO에서는 String으로 받고 서비스에서 검증 후 400 처리한다.
+ * 정책:
+ * - author는 서버에서 인증 사용자로 결정한다.
+ * - status는 서버에서 OPEN으로 강제한다.
+ * - applicantCount는 서버에서 초기값을 설정한다.
  *
- * CSV 정책:
- * - required_skills는 API는 List<String> skills로 받고, 서버에서 CSV로 join하여 DB에 저장한다.
+ * 값 고정 필드:
+ * - type, category는 DTO에서 String으로 받고
+ *   서비스에서 허용값 검증 후 400으로 처리한다.
+ *
+ * skills 저장 정책:
+ * - API는 List<String>으로 받고
+ * - 서버에서 CSV 문자열로 변환하여 저장한다.
  *
  * tag 정책:
- * - tag는 표시만. (검색/필터 X)
- * - ERD상 tag는 VARCHAR(50) 단일 값이므로, MVP에서는 단일 String로만 받는다.
- *
- * NOTE(팀 공유 / API-ERD 불일치 가능):
- * - 너가 올린 API 스샷에 contactType/contactValue/roles/studyDetail 등이 있었지만,
- *   현재 ERD( recruit_post )에는 해당 컬럼이 없다.
- *   => MVP에서는 ERD에 존재하는 필드만 Create에 포함한다.
+ * - tag는 표시용 단일 문자열이다.
+ * - 검색/필터 파라미터로는 사용하지 않는다.
  */
 public class RecruitCreateRequest {
 
@@ -41,7 +50,7 @@ public class RecruitCreateRequest {
     private String category;
 
     @Size(max = 50)
-    private String tag; // 표시용 단일 태그 (optional)
+    private String tag;
 
     @NotBlank
     @Size(max = 120)
@@ -51,11 +60,15 @@ public class RecruitCreateRequest {
     private String content;
 
     /**
-     * required_skills (CSV 저장)
+     * required_skills
+     * - API: List<String>
+     * - DB: CSV 문자열
      */
-    private List<String> skills;
+    @Valid
+    private List<@NotBlank @Size(max = 50) String> skills;
 
     @NotNull
+    @Min(1)
     private Integer totalHeadcount;
 
     private LocalDate deadline;
