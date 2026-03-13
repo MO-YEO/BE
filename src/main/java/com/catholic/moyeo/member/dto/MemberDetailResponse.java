@@ -4,6 +4,8 @@ import com.catholic.moyeo.member.domain.Member;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
 @Builder
 public class MemberDetailResponse {
@@ -16,6 +18,7 @@ public class MemberDetailResponse {
     private String profileImageUrl;
     private Long departmentId;
     private String departmentName;
+    private List<String> techStacks;
 
     public static MemberDetailResponse from(Member member) {
         return MemberDetailResponse.builder()

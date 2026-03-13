@@ -1,5 +1,7 @@
 package com.catholic.moyeo.member.controller;
 
+import com.catholic.moyeo.member.dto.MemberDetailResponse;
+import com.catholic.moyeo.member.dto.MemberListResponse;
 import com.catholic.moyeo.member.dto.MyProfileResponse;
 import com.catholic.moyeo.member.dto.UpdateMyProfileRequest;
 import com.catholic.moyeo.member.service.MemberService;
@@ -17,7 +19,7 @@ public class MemberController {
     // 내 프로필 조회
     @GetMapping("/me")
     public MyProfileResponse getMyProfile(Authentication authentication) {
-        Long memberId = (Long) authentication.getPrincipal(); // JWT에서 넣어준 principal
+        Long memberId = (Long) authentication.getPrincipal();
         return memberService.getMyProfile(memberId);
     }
 
@@ -29,5 +31,21 @@ public class MemberController {
     ) {
         Long memberId = (Long) authentication.getPrincipal();
         return memberService.updateMyProfile(memberId, request);
+    }
+
+    // 팀원 목록 조회
+    @GetMapping
+    public MemberListResponse getMembers(
+            @RequestParam(required = false) String techStack,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return memberService.getMembers(techStack, page, size);
+    }
+
+    // 팀원 상세 조회
+    @GetMapping("/{memberId}")
+    public MemberDetailResponse getMemberDetail(@PathVariable Long memberId) {
+        return memberService.getMemberDetail(memberId);
     }
 }

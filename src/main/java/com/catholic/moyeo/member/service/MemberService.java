@@ -1,10 +1,8 @@
 package com.catholic.moyeo.member.service;
 
-import com.catholic.moyeo.member.domain.Department;
-import com.catholic.moyeo.member.domain.Member;
+import com.catholic.moyeo.member.domain.*;
 import com.catholic.moyeo.member.dto.*;
-import com.catholic.moyeo.member.repository.DepartmentRepository;
-import com.catholic.moyeo.member.repository.MemberRepository;
+import com.catholic.moyeo.member.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,6 +20,16 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final DepartmentRepository departmentRepository;
+    private final TechStackRepository techStackRepository;
+    private final MemberTechStackRepository memberTechStackRepository;
+
+    // 기술스택 조회 메서드
+    private List<String> getTechStacks(Member member) {
+        return memberTechStackRepository.findByMember(member)
+                .stream()
+                .map(ms -> ms.getTechStack().getName())
+                .toList();
+    }
 
     // 내 프로필 조회
     public MyProfileResponse getMyProfile(Long memberId) {
@@ -38,18 +46,45 @@ public class MemberService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
 
-        return MemberDetailResponse.from(member);
+        return MemberDetailResponse.builder()
+                .memberId(member.getId())
+                .nickname(member.getNickname())
+                .role(member.getRole())
+                .intro(member.getIntro())
+                .githubUrl(member.getGithubUrl())
+                .profileImageUrl(member.getProfileImageUrl())
+                .departmentId(member.getDepartment() != null ? member.getDepartment().getId() : null)
+                .departmentName(member.getDepartment() != null ? member.getDepartment().getName() : null)
+                .techStacks(getTechStacks(member))
+                .build();
     }
 
     // 팀원 목록 조회
-    public MemberListResponse getMembers(int page, int size) {
+    public MemberListResponse getMembers(String techStack, int page, int size) {
 
         PageRequest pageRequest = PageRequest.of(page, size);
-        Page<Member> memberPage = memberRepository.findAll(pageRequest);
+
+        Page<Member> memberPage;
+
+        if (techStack != null) {
+            memberPage = memberRepository.findByTechStack(techStack.toLowerCase(), pageRequest);
+        } else {
+            memberPage = memberRepository.findAll(pageRequest);
+        }
 
         List<MemberCardResponse> items = memberPage.getContent()
                 .stream()
-                .map(MemberCardResponse::from)
+                .map(member -> MemberCardResponse.builder()
+                        .memberId(member.getId())
+                        .nickname(member.getNickname())
+                        .role(member.getRole())
+                        .intro(member.getIntro())
+                        .githubUrl(member.getGithubUrl())
+                        .profileImageUrl(member.getProfileImageUrl())
+                        .departmentId(member.getDepartment() != null ? member.getDepartment().getId() : null)
+                        .departmentName(member.getDepartment() != null ? member.getDepartment().getName() : null)
+                        .techStacks(getTechStacks(member))
+                        .build())
                 .toList();
 
         MemberListResponse.PageInfo pageInfo =
@@ -84,8 +119,31 @@ public class MemberService {
                 request.getRole(),
                 request.getIntro(),
                 request.getGithubUrl(),
+                request.getContactEmail(),
                 department
         );
+
+        // 기존 기술 삭제
+        memberTechStackRepository.deleteByMember(member);
+
+        // 새 기술 저장
+        if (request.getTechStacks() != null) {
+
+            for (String name : request.getTechStacks()) {
+
+                if (name == null || name.isBlank()) continue;
+
+                String normalized = name.trim().toLowerCase();
+
+                TechStack techStack = techStackRepository
+                        .findByName(normalized)
+                        .orElseGet(() -> techStackRepository.save(new TechStack(normalized)));
+
+                memberTechStackRepository.save(
+                        new MemberTechStack(member, techStack)
+                );
+            }
+        }
 
         return MyProfileResponse.from(member);
     }

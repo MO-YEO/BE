@@ -7,8 +7,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
-@EntityListeners(AuditingEntityListener.class)
 
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Entity
 @Table(
@@ -32,7 +32,10 @@ public class Member {
     private String providerSub; // 구글 subject
 
     @Column(nullable = false, length = 255)
-    private String email;
+    private String email; // 로그인용 이메일
+
+    @Column(name = "contact_email", length = 255)
+    private String contactEmail; // 연락용 이메일
 
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
@@ -45,7 +48,6 @@ public class Member {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    //추가했음
     @Column(nullable = false, length = 30)
     private String nickname;
 
@@ -83,11 +85,13 @@ public class Member {
         return member;
     }
 
-    public void updateProfile(String nickname, String role, String intro, String githubUrl, Department department) {
+    public void updateProfile(String nickname, String role, String intro, String githubUrl,
+                              String contactEmail, Department department) {
         if (nickname != null) this.nickname = nickname;
         if (role != null) this.role = role;
         if (intro != null) this.intro = intro;
         if (githubUrl != null) this.githubUrl = githubUrl;
+        if (contactEmail != null) this.contactEmail = contactEmail;
         if (department != null) this.department = department;
     }
 }
