@@ -16,15 +16,15 @@ public class RecruitAuthorResponse {
 
     private Long memberId;
     private String nickname;
-    private String departmentName;
 
-    public RecruitAuthorResponse(Long memberId, String nickname, String departmentName) {
+
+    public RecruitAuthorResponse(Long memberId, String nickname) {
         this.memberId = memberId;
         this.nickname = nickname;
-        this.departmentName = departmentName;
+
     }
 
     public Long getMemberId() { return memberId; }
     public String getNickname() { return nickname; }
-    public String getDepartmentName() { return departmentName; }
+
 }

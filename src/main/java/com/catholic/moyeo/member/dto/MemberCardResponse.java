@@ -4,6 +4,8 @@ import com.catholic.moyeo.member.domain.Member;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
 @Builder
 public class MemberCardResponse {
@@ -14,10 +16,12 @@ public class MemberCardResponse {
     private String intro;
     private String githubUrl;
     private String profileImageUrl;
-    private Long departmentId;
-    private String departmentName;
+    private List<String> techStacks;
+    private List<String> activityCategories;
 
-    public static MemberCardResponse from(Member member) {
+    public static MemberCardResponse from(Member member,
+                                          List<String> techStacks,
+                                          List<String> activityCategories) {
         return MemberCardResponse.builder()
                 .memberId(member.getId())
                 .nickname(member.getNickname())
@@ -25,12 +29,8 @@ public class MemberCardResponse {
                 .intro(member.getIntro())
                 .githubUrl(member.getGithubUrl())
                 .profileImageUrl(member.getProfileImageUrl())
-                .departmentId(
-                        member.getDepartment() != null ? member.getDepartment().getId() : null
-                )
-                .departmentName(
-                        member.getDepartment() != null ? member.getDepartment().getName() : null
-                )
+                .techStacks(techStacks)
+                .activityCategories(activityCategories)
                 .build();
     }
 }

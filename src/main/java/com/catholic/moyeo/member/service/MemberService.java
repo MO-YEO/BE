@@ -1,10 +1,9 @@
 package com.catholic.moyeo.member.service;
 
-import com.catholic.moyeo.member.domain.Department;
-import com.catholic.moyeo.member.domain.Member;
+import com.catholic.moyeo.common.domain.ActivityCategory;
+import com.catholic.moyeo.member.domain.*;
 import com.catholic.moyeo.member.dto.*;
-import com.catholic.moyeo.member.repository.DepartmentRepository;
-import com.catholic.moyeo.member.repository.MemberRepository;
+import com.catholic.moyeo.member.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,7 +20,25 @@ import java.util.List;
 public class MemberService {
 
     private final MemberRepository memberRepository;
-    private final DepartmentRepository departmentRepository;
+    private final TechStackRepository techStackRepository;
+    private final MemberTechStackRepository memberTechStackRepository;
+    private final MemberActivityCategoryRepository memberActivityCategoryRepository;
+
+
+    // 기술스택 조회 메서드
+    private List<String> getTechStacks(Member member) {
+        return memberTechStackRepository.findByMember(member)
+                .stream()
+                .map(ms -> ms.getTechStack().getName())
+                .toList();
+    }
+
+    private List<String> getActivityCategories(Member member) {
+        return memberActivityCategoryRepository.findByMember(member)
+                .stream()
+                .map(mac -> mac.getActivityCategory().getLabel())
+                .toList();
+    }
 
     // 내 프로필 조회
     public MyProfileResponse getMyProfile(Long memberId) {
@@ -29,7 +46,11 @@ public class MemberService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
 
-        return MyProfileResponse.from(member);
+        return MyProfileResponse.from(
+                member,
+                getTechStacks(member),
+                getActivityCategories(member)
+        );
     }
 
     // 특정 유저 프로필 조회
@@ -38,18 +59,36 @@ public class MemberService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
 
-        return MemberDetailResponse.from(member);
+        return MemberDetailResponse.from(
+                member,
+                getTechStacks(member),
+                getActivityCategories(member)
+        );
     }
 
     // 팀원 목록 조회
-    public MemberListResponse getMembers(int page, int size) {
+    public MemberListResponse getMembers(String techStack, String activityCategory, int page, int size) {
 
         PageRequest pageRequest = PageRequest.of(page, size);
-        Page<Member> memberPage = memberRepository.findAll(pageRequest);
+
+        Page<Member> memberPage;
+
+        if (techStack != null && !techStack.isBlank()) {
+            memberPage = memberRepository.findByTechStack(techStack.trim().toLowerCase(), pageRequest);
+        } else if (activityCategory != null && !activityCategory.isBlank()) {
+            ActivityCategory category = ActivityCategory.from(activityCategory);
+            memberPage = memberRepository.findByActivityCategory(category, pageRequest);
+        } else {
+            memberPage = memberRepository.findAll(pageRequest);
+        }
 
         List<MemberCardResponse> items = memberPage.getContent()
                 .stream()
-                .map(MemberCardResponse::from)
+                .map(member -> MemberCardResponse.from(
+                        member,
+                        getTechStacks(member),
+                        getActivityCategories(member)
+                ))
                 .toList();
 
         MemberListResponse.PageInfo pageInfo =
@@ -73,20 +112,55 @@ public class MemberService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
 
-        Department department = null;
-        if (request.getDepartmentId() != null) {
-            department = departmentRepository.findById(request.getDepartmentId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Department not found"));
-        }
-
         member.updateProfile(
                 request.getNickname(),
+                request.getProfileImageUrl(),
                 request.getRole(),
                 request.getIntro(),
                 request.getGithubUrl(),
-                department
+                request.getContactEmail(),
+                request.getPhoneNumber()
         );
 
-        return MyProfileResponse.from(member);
+        // 기존 기술 삭제
+        memberTechStackRepository.deleteByMember(member);
+
+        // 새 기술 저장
+        if (request.getTechStacks() != null) {
+
+            for (String name : request.getTechStacks()) {
+
+                if (name == null || name.isBlank()) continue;
+
+                String normalized = name.trim().toLowerCase();
+
+                TechStack techStack = techStackRepository
+                        .findByName(normalized)
+                        .orElseGet(() -> techStackRepository.save(new TechStack(normalized)));
+
+                memberTechStackRepository.save(
+                        new MemberTechStack(member, techStack)
+                );
+            }
+        }
+        memberActivityCategoryRepository.deleteByMember(member);
+
+        if (request.getActivityCategories() != null) {
+            for (String value : request.getActivityCategories()) {
+                if (value == null || value.isBlank()) continue;
+
+                ActivityCategory category = ActivityCategory.from(value);
+
+                memberActivityCategoryRepository.save(
+                        new MemberActivityCategory(member, category)
+                );
+            }
+        }
+
+        return MyProfileResponse.from(
+                member,
+                getTechStacks(member),
+                getActivityCategories(member)
+        );
     }
 }
