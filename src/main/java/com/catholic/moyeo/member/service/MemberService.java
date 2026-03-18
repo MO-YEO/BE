@@ -1,5 +1,6 @@
 package com.catholic.moyeo.member.service;
 
+import com.catholic.moyeo.common.domain.ActivityCategory;
 import com.catholic.moyeo.member.domain.*;
 import com.catholic.moyeo.member.dto.*;
 import com.catholic.moyeo.member.repository.*;
@@ -19,9 +20,10 @@ import java.util.List;
 public class MemberService {
 
     private final MemberRepository memberRepository;
-    private final DepartmentRepository departmentRepository;
     private final TechStackRepository techStackRepository;
     private final MemberTechStackRepository memberTechStackRepository;
+    private final MemberActivityCategoryRepository memberActivityCategoryRepository;
+
 
     // 기술스택 조회 메서드
     private List<String> getTechStacks(Member member) {
@@ -31,13 +33,24 @@ public class MemberService {
                 .toList();
     }
 
+    private List<String> getActivityCategories(Member member) {
+        return memberActivityCategoryRepository.findByMember(member)
+                .stream()
+                .map(mac -> mac.getActivityCategory().getLabel())
+                .toList();
+    }
+
     // 내 프로필 조회
     public MyProfileResponse getMyProfile(Long memberId) {
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
 
-        return MyProfileResponse.from(member);
+        return MyProfileResponse.from(
+                member,
+                getTechStacks(member),
+                getActivityCategories(member)
+        );
     }
 
     // 특정 유저 프로필 조회
@@ -46,45 +59,36 @@ public class MemberService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
 
-        return MemberDetailResponse.builder()
-                .memberId(member.getId())
-                .nickname(member.getNickname())
-                .role(member.getRole())
-                .intro(member.getIntro())
-                .githubUrl(member.getGithubUrl())
-                .profileImageUrl(member.getProfileImageUrl())
-                .departmentId(member.getDepartment() != null ? member.getDepartment().getId() : null)
-                .departmentName(member.getDepartment() != null ? member.getDepartment().getName() : null)
-                .techStacks(getTechStacks(member))
-                .build();
+        return MemberDetailResponse.from(
+                member,
+                getTechStacks(member),
+                getActivityCategories(member)
+        );
     }
 
     // 팀원 목록 조회
-    public MemberListResponse getMembers(String techStack, int page, int size) {
+    public MemberListResponse getMembers(String techStack, String activityCategory, int page, int size) {
 
         PageRequest pageRequest = PageRequest.of(page, size);
 
         Page<Member> memberPage;
 
-        if (techStack != null) {
-            memberPage = memberRepository.findByTechStack(techStack.toLowerCase(), pageRequest);
+        if (techStack != null && !techStack.isBlank()) {
+            memberPage = memberRepository.findByTechStack(techStack.trim().toLowerCase(), pageRequest);
+        } else if (activityCategory != null && !activityCategory.isBlank()) {
+            ActivityCategory category = ActivityCategory.from(activityCategory);
+            memberPage = memberRepository.findByActivityCategory(category, pageRequest);
         } else {
             memberPage = memberRepository.findAll(pageRequest);
         }
 
         List<MemberCardResponse> items = memberPage.getContent()
                 .stream()
-                .map(member -> MemberCardResponse.builder()
-                        .memberId(member.getId())
-                        .nickname(member.getNickname())
-                        .role(member.getRole())
-                        .intro(member.getIntro())
-                        .githubUrl(member.getGithubUrl())
-                        .profileImageUrl(member.getProfileImageUrl())
-                        .departmentId(member.getDepartment() != null ? member.getDepartment().getId() : null)
-                        .departmentName(member.getDepartment() != null ? member.getDepartment().getName() : null)
-                        .techStacks(getTechStacks(member))
-                        .build())
+                .map(member -> MemberCardResponse.from(
+                        member,
+                        getTechStacks(member),
+                        getActivityCategories(member)
+                ))
                 .toList();
 
         MemberListResponse.PageInfo pageInfo =
@@ -108,19 +112,14 @@ public class MemberService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
 
-        Department department = null;
-        if (request.getDepartmentId() != null) {
-            department = departmentRepository.findById(request.getDepartmentId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Department not found"));
-        }
-
         member.updateProfile(
                 request.getNickname(),
+                request.getProfileImageUrl(),
                 request.getRole(),
                 request.getIntro(),
                 request.getGithubUrl(),
                 request.getContactEmail(),
-                department
+                request.getPhoneNumber()
         );
 
         // 기존 기술 삭제
@@ -144,7 +143,24 @@ public class MemberService {
                 );
             }
         }
+        memberActivityCategoryRepository.deleteByMember(member);
 
-        return MyProfileResponse.from(member);
+        if (request.getActivityCategories() != null) {
+            for (String value : request.getActivityCategories()) {
+                if (value == null || value.isBlank()) continue;
+
+                ActivityCategory category = ActivityCategory.from(value);
+
+                memberActivityCategoryRepository.save(
+                        new MemberActivityCategory(member, category)
+                );
+            }
+        }
+
+        return MyProfileResponse.from(
+                member,
+                getTechStacks(member),
+                getActivityCategories(member)
+        );
     }
 }

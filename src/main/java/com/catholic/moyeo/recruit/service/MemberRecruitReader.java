@@ -30,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
  * - local 환경을 제외한 모든 환경(dev, prod 등)에서 사용된다.
  */
 @Component
-@Profile("!local")
 @Transactional(readOnly = true)
 public class MemberRecruitReader implements RecruitMemberReader {
 
@@ -55,8 +54,7 @@ public class MemberRecruitReader implements RecruitMemberReader {
 
         return new RecruitAuthorResponse(
                 member.getId(),
-                member.getNickname(),
-                member.getDepartment() != null ? member.getDepartment().getName() : null
+                member.getNickname()
         );
     }
 

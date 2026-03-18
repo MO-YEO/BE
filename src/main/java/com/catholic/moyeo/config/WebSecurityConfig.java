@@ -59,7 +59,9 @@ public class WebSecurityConfig {
                                 "/oauth2/**",
                                 "/login/**",
                                 "/oauth/**",
-                                "/oauth/callback"
+                                "/oauth/callback",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

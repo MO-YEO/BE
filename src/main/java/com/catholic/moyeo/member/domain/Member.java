@@ -37,6 +37,9 @@ public class Member {
     @Column(name = "contact_email", length = 255)
     private String contactEmail; // 연락용 이메일
 
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber; // 전화번호
+
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
 
@@ -63,9 +66,6 @@ public class Member {
     @Column(name = "profile_image_url")
     private String profileImageUrl;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id")
-    private Department department;
 
     protected Member() {}
 
@@ -85,13 +85,14 @@ public class Member {
         return member;
     }
 
-    public void updateProfile(String nickname, String role, String intro, String githubUrl,
-                              String contactEmail, Department department) {
+    public void updateProfile(String nickname, String profileImageUrl, String role, String intro,
+                              String githubUrl, String contactEmail, String phoneNumber) {
         if (nickname != null) this.nickname = nickname;
+        if (profileImageUrl != null) this.profileImageUrl = profileImageUrl;
         if (role != null) this.role = role;
         if (intro != null) this.intro = intro;
         if (githubUrl != null) this.githubUrl = githubUrl;
         if (contactEmail != null) this.contactEmail = contactEmail;
-        if (department != null) this.department = department;
+        if (phoneNumber != null) this.phoneNumber = phoneNumber;
     }
 }

@@ -16,11 +16,12 @@ public class MemberDetailResponse {
     private String intro;
     private String githubUrl;
     private String profileImageUrl;
-    private Long departmentId;
-    private String departmentName;
     private List<String> techStacks;
+    private List<String> activityCategories;
 
-    public static MemberDetailResponse from(Member member) {
+    public static MemberDetailResponse from(Member member,
+                                            List<String> techStacks,
+                                            List<String> activityCategories) {
         return MemberDetailResponse.builder()
                 .memberId(member.getId())
                 .nickname(member.getNickname())
@@ -28,12 +29,10 @@ public class MemberDetailResponse {
                 .intro(member.getIntro())
                 .githubUrl(member.getGithubUrl())
                 .profileImageUrl(member.getProfileImageUrl())
-                .departmentId(
-                        member.getDepartment() != null ? member.getDepartment().getId() : null
-                )
-                .departmentName(
-                        member.getDepartment() != null ? member.getDepartment().getName() : null
-                )
+                .techStacks(techStacks)
+                .activityCategories(activityCategories)
                 .build();
     }
+
+
 }

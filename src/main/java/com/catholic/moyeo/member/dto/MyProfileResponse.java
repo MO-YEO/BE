@@ -1,3 +1,5 @@
+// 회원가입 후 계정생성
+
 package com.catholic.moyeo.member.dto;
 
 import com.catholic.moyeo.member.domain.Member;
@@ -19,11 +21,15 @@ public class MyProfileResponse {
     private String intro;
     private String githubUrl;
     private String profileImageUrl;
-    private Long departmentId;
-    private String departmentName;
-    private List<String> techStacks;
 
-    public static MyProfileResponse from(Member member) {
+
+    private List<String> techStacks;
+    private List<String> activityCategories;
+    private String phoneNumber;
+
+    public static MyProfileResponse from(Member member,
+                                         List<String> techStacks,
+                                         List<String> activityCategories) {
         return MyProfileResponse.builder()
                 .memberId(member.getId())
                 .email(member.getEmail())
@@ -34,12 +40,10 @@ public class MyProfileResponse {
                 .intro(member.getIntro())
                 .githubUrl(member.getGithubUrl())
                 .profileImageUrl(member.getProfileImageUrl())
-                .departmentId(
-                        member.getDepartment() != null ? member.getDepartment().getId() : null
-                )
-                .departmentName(
-                        member.getDepartment() != null ? member.getDepartment().getName() : null
-                )
+                .techStacks(techStacks)
+                .activityCategories(activityCategories)
+                .phoneNumber(member.getPhoneNumber())
                 .build();
     }
+
 }
