@@ -14,29 +14,50 @@ public class BoardSummaryResponse {
     private final BoardAuthorResponse author;
     private final LocalDateTime createdAt;
 
+    private final long likeCount;
+    private final long commentCount;
+    private final boolean likedByMe;
+
     public BoardSummaryResponse(
             Long postId,
             String title,
             BoardAuthorResponse author,
-            LocalDateTime createdAt
+            LocalDateTime createdAt,
+            long likeCount,
+            long commentCount,
+            boolean likedByMe
     ) {
         this.postId = postId;
         this.title = title;
         this.author = author;
         this.createdAt = createdAt;
+        this.likeCount = likeCount;
+        this.commentCount = commentCount;
+        this.likedByMe = likedByMe;
     }
+
 
     public static BoardSummaryResponse from(
             Long postId,
             String title,
             BoardAuthorResponse author,
-            LocalDateTime createdAt
+            LocalDateTime createdAt,
+            long likeCount,
+            long commentCount,
+            boolean likedByMe
     ) {
-        return new BoardSummaryResponse(postId, title, author, createdAt);
+        return new BoardSummaryResponse(
+                postId, title, author, createdAt,
+                likeCount, commentCount, likedByMe
+        );
     }
 
     public Long getPostId() { return postId; }
     public String getTitle() { return title; }
     public BoardAuthorResponse getAuthor() { return author; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+
+    public long getLikeCount() { return likeCount; }
+    public long getCommentCount() { return commentCount; }
+    public boolean isLikedByMe() { return likedByMe; }
 }

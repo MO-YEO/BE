@@ -51,7 +51,8 @@ public class WebSecurityConfig {
                         .accessDeniedHandler((req, res, e) -> res.sendError(HttpStatus.FORBIDDEN.value()))
                 )
 
-
+                //TODO
+                //.anyRequest().authenticated()로 바꿔야함
                 // URL 접근 정책
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
@@ -63,7 +64,7 @@ public class WebSecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
 
                 // OAuth2 로그인 설정
