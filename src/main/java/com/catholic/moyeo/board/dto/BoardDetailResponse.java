@@ -18,6 +18,10 @@ public class BoardDetailResponse {
     private final LocalDateTime updatedAt;
     private final boolean mine;
 
+    private final long likeCount;
+    private final long commentCount;
+    private final boolean likedByMe;
+
     public BoardDetailResponse(
             Long postId,
             String title,
@@ -25,7 +29,10 @@ public class BoardDetailResponse {
             BoardAuthorResponse author,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
-            boolean mine
+            boolean mine,
+            long likeCount,
+            long commentCount,
+            boolean likedByMe
     ) {
         this.postId = postId;
         this.title = title;
@@ -34,6 +41,9 @@ public class BoardDetailResponse {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.mine = mine;
+        this.likeCount = likeCount;
+        this.commentCount = commentCount;
+        this.likedByMe = likedByMe;
     }
 
     public static BoardDetailResponse from(
@@ -43,10 +53,22 @@ public class BoardDetailResponse {
             BoardAuthorResponse author,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
-            boolean mine
+            boolean mine,
+            long likeCount,
+            long commentCount,
+            boolean likedByMe
     ) {
         return new BoardDetailResponse(
-                postId, title, content, author, createdAt, updatedAt, mine
+                postId,
+                title,
+                content,
+                author,
+                createdAt,
+                updatedAt,
+                mine,
+                likeCount,
+                commentCount,
+                likedByMe
         );
     }
 
@@ -57,4 +79,8 @@ public class BoardDetailResponse {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public boolean isMine() { return mine; }
+
+    public long getLikeCount() { return likeCount; }
+    public long getCommentCount() { return commentCount; }
+    public boolean isLikedByMe() { return likedByMe; }
 }

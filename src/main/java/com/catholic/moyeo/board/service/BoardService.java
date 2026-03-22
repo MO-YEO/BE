@@ -8,6 +8,8 @@ import com.catholic.moyeo.board.dto.BoardListResponse;
 import com.catholic.moyeo.board.dto.BoardSummaryResponse;
 import com.catholic.moyeo.board.dto.BoardUpdateRequest;
 import com.catholic.moyeo.board.dto.PageInfoResponse;
+import com.catholic.moyeo.board.repository.BoardCommentRepository;
+import com.catholic.moyeo.board.repository.BoardPostLikeRepository;
 import com.catholic.moyeo.board.repository.BoardPostRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,13 +37,20 @@ public class BoardService {
 
     private final BoardPostRepository boardPostRepository;
     private final BoardAuthorReader boardAuthorReader;
+    private final BoardPostLikeRepository boardPostLikeRepository;
+    private final BoardCommentRepository boardCommentRepository;
+
 
     public BoardService(
             BoardPostRepository boardPostRepository,
-            BoardAuthorReader boardAuthorReader
+            BoardAuthorReader boardAuthorReader,
+            BoardPostLikeRepository boardPostLikeRepository,
+            BoardCommentRepository boardCommentRepository
     ) {
         this.boardPostRepository = boardPostRepository;
         this.boardAuthorReader = boardAuthorReader;
+        this.boardPostLikeRepository = boardPostLikeRepository;
+        this.boardCommentRepository = boardCommentRepository;
     }
 
     /**
@@ -51,11 +60,11 @@ public class BoardService {
      * - page/size는 Pageable로 처리
      */
     @Transactional(readOnly = true)
-    public BoardListResponse listPosts(String keyword, Pageable pageable) {
+    public BoardListResponse listPosts(String keyword, Pageable pageable, Long me) {
         String normalizedKeyword = normalizeKeyword(keyword);
         Page<BoardPost> page = boardPostRepository.search(normalizedKeyword, pageable);
 
-        List<BoardSummaryResponse> posts = toSummaryResponses(page.getContent());
+        List<BoardSummaryResponse> posts = toSummaryResponses(page.getContent(), me);
         return BoardListResponse.of(posts, PageInfoResponse.from(page));
     }
 
@@ -69,6 +78,13 @@ public class BoardService {
         BoardPost post = getPostEntity(postId);
         BoardAuthorResponse author = boardAuthorReader.getAuthor(post.getAuthorUserId());
 
+        long likeCount = boardPostLikeRepository.countByBoardPostId(post.getId());
+
+        long commentCount = boardCommentRepository.countByBoardPostId(post.getId());
+
+        boolean likedByMe = (me != null) &&
+                boardPostLikeRepository.existsByBoardPostIdAndUserId(post.getId(), me);
+
         return BoardDetailResponse.from(
                 post.getId(),
                 post.getTitle(),
@@ -76,7 +92,10 @@ public class BoardService {
                 author,
                 post.getCreatedAt(),
                 post.getUpdatedAt(),
-                post.getAuthorUserId().equals(me)
+                post.getAuthorUserId().equals(me),
+                likeCount,
+                commentCount,
+                likedByMe
         );
     }
 
@@ -95,6 +114,10 @@ public class BoardService {
 
         BoardAuthorResponse author = boardAuthorReader.getAuthor(saved.getAuthorUserId());
 
+        long likeCount = boardPostLikeRepository.countByBoardPostId(saved.getId());
+        long commentCount = boardCommentRepository.countByBoardPostId(saved.getId());
+        boolean likedByMe = false;
+
         return BoardDetailResponse.from(
                 saved.getId(),
                 saved.getTitle(),
@@ -102,7 +125,10 @@ public class BoardService {
                 author,
                 saved.getCreatedAt(),
                 saved.getUpdatedAt(),
-                true
+                true,
+                likeCount,
+                commentCount,
+                likedByMe
         );
     }
 
@@ -124,6 +150,11 @@ public class BoardService {
 
         BoardAuthorResponse author = boardAuthorReader.getAuthor(post.getAuthorUserId());
 
+        long likeCount = boardPostLikeRepository.countByBoardPostId(post.getId());
+        long commentCount = boardCommentRepository.countByBoardPostId(post.getId());
+        boolean likedByMe = (me != null) &&
+                boardPostLikeRepository.existsByBoardPostIdAndUserId(post.getId(), me);
+
         return BoardDetailResponse.from(
                 post.getId(),
                 post.getTitle(),
@@ -131,7 +162,10 @@ public class BoardService {
                 author,
                 post.getCreatedAt(),
                 post.getUpdatedAt(),
-                true
+                true,
+                likeCount,
+                commentCount,
+                likedByMe
         );
     }
 
@@ -153,7 +187,7 @@ public class BoardService {
     @Transactional(readOnly = true)
     public BoardListResponse listMyPosts(Long me, Pageable pageable) {
         Page<BoardPost> page = boardPostRepository.findByAuthorUserId(me, pageable);
-        List<BoardSummaryResponse> posts = toSummaryResponses(page.getContent());
+        List<BoardSummaryResponse> posts = toSummaryResponses(page.getContent(), me);
         return BoardListResponse.of(posts, PageInfoResponse.from(page));
     }
 
@@ -172,7 +206,8 @@ public class BoardService {
      * 목록에서 작성자 정보를 게시글마다 개별 조회하지 않도록
      * userId를 모아 한 번에 조회한다.
      */
-    private List<BoardSummaryResponse> toSummaryResponses(List<BoardPost> posts) {
+    private List<BoardSummaryResponse> toSummaryResponses(List<BoardPost> posts, Long me) {
+
         Set<Long> userIds = new LinkedHashSet<>();
         for (BoardPost post : posts) {
             userIds.add(post.getAuthorUserId());
@@ -181,15 +216,29 @@ public class BoardService {
         Map<Long, BoardAuthorResponse> authors = boardAuthorReader.getAuthors(userIds);
 
         return posts.stream()
-                .map(post -> BoardSummaryResponse.from(
-                        post.getId(),
-                        post.getTitle(),
-                        authors.getOrDefault(
-                                post.getAuthorUserId(),
-                                new BoardAuthorResponse(post.getAuthorUserId(), null)
-                        ),
-                        post.getCreatedAt()
-                ))
+                .map(post -> {
+
+                    long likeCount = boardPostLikeRepository
+                            .countByBoardPostId(post.getId());
+
+                    long commentCount = boardCommentRepository.countByBoardPostId(post.getId());
+
+                    boolean likedByMe = (me != null) &&
+                            boardPostLikeRepository.existsByBoardPostIdAndUserId(post.getId(), me);
+
+                    return BoardSummaryResponse.from(
+                            post.getId(),
+                            post.getTitle(),
+                            authors.getOrDefault(
+                                    post.getAuthorUserId(),
+                                    new BoardAuthorResponse(post.getAuthorUserId(), null)
+                            ),
+                            post.getCreatedAt(),
+                            likeCount,
+                            commentCount,
+                            likedByMe
+                    );
+                })
                 .toList();
     }
 

@@ -23,7 +23,7 @@ public class MemberService {
     private final TechStackRepository techStackRepository;
     private final MemberTechStackRepository memberTechStackRepository;
     private final MemberActivityCategoryRepository memberActivityCategoryRepository;
-
+    private final MemberBookmarkRepository memberBookmarkRepository;
 
     // 기술스택 조회 메서드
     private List<String> getTechStacks(Member member) {
@@ -66,8 +66,10 @@ public class MemberService {
         );
     }
 
-    // 팀원 목록 조회
-    public MemberListResponse getMembers(String techStack, String activityCategory, int page, int size) {
+    public MemberListResponse getMembers(Long userId, String techStack, String activityCategory, int page, int size) {
+
+        Member currentUser = memberRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         PageRequest pageRequest = PageRequest.of(page, size);
 
@@ -84,11 +86,17 @@ public class MemberService {
 
         List<MemberCardResponse> items = memberPage.getContent()
                 .stream()
-                .map(member -> MemberCardResponse.from(
-                        member,
-                        getTechStacks(member),
-                        getActivityCategories(member)
-                ))
+                .map(member -> {
+                    boolean bookmarked = memberBookmarkRepository
+                            .existsByUserAndTarget(currentUser, member);
+
+                    return MemberCardResponse.from(
+                            member,
+                            getTechStacks(member),
+                            getActivityCategories(member),
+                            bookmarked
+                    );
+                })
                 .toList();
 
         MemberListResponse.PageInfo pageInfo =
@@ -162,5 +170,73 @@ public class MemberService {
                 getTechStacks(member),
                 getActivityCategories(member)
         );
+    }
+
+    //북마크 추가
+    @Transactional
+    public void addBookmark(Long userId, Long targetId) {
+
+        if (userId.equals(targetId)) {
+            throw new IllegalArgumentException("자기 자신 북마크 불가");
+        }
+
+        Member user = memberRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        Member target = memberRepository.findById(targetId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (memberBookmarkRepository.existsByUserAndTarget(user, target)) {
+            return;
+        }
+
+        memberBookmarkRepository.save(new MemberBookmark(user, target));
+    }
+
+    //북마크 삭제
+    @Transactional
+    public void removeBookmark(Long userId, Long targetId) {
+
+        Member user = memberRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        Member target = memberRepository.findById(targetId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        memberBookmarkRepository.deleteByUserAndTarget(user, target);
+    }
+
+    //내가 찜한 유저 목록
+    public MemberListResponse getMyBookmarks(Long userId) {
+
+        Member user = memberRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        List<MemberBookmark> bookmarks = memberBookmarkRepository.findByUser(user);
+
+        List<MemberCardResponse> items = bookmarks.stream()
+                .map(bookmark -> {
+                    Member target = bookmark.getTarget();
+
+                    return MemberCardResponse.from(
+                            target,
+                            getTechStacks(target),
+                            getActivityCategories(target),
+                            true
+                    );
+                })
+                .toList();
+
+        return MemberListResponse.builder()
+                .items(items)
+                .pageInfo(
+                        MemberListResponse.PageInfo.builder()
+                                .totalElements(items.size())
+                                .totalPages(1)
+                                .page(0)
+                                .size(items.size())
+                                .build()
+                )
+                .build();
     }
 }

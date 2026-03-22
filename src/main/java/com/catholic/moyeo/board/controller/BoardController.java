@@ -43,7 +43,8 @@ public class BoardController {
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
-        return ResponseEntity.ok(boardService.listPosts(keyword, pageable));
+        Long me = currentUserProvider.getCurrentUserId();
+        return ResponseEntity.ok(boardService.listPosts(keyword, pageable, me));
     }
 
     @GetMapping("/{id}")

@@ -18,10 +18,12 @@ public class MemberCardResponse {
     private String profileImageUrl;
     private List<String> techStacks;
     private List<String> activityCategories;
+    private boolean bookmarked;
 
     public static MemberCardResponse from(Member member,
                                           List<String> techStacks,
-                                          List<String> activityCategories) {
+                                          List<String> activityCategories,
+                                          boolean bookmarked) {
         return MemberCardResponse.builder()
                 .memberId(member.getId())
                 .nickname(member.getNickname())
@@ -31,6 +33,7 @@ public class MemberCardResponse {
                 .profileImageUrl(member.getProfileImageUrl())
                 .techStacks(techStacks)
                 .activityCategories(activityCategories)
+                .bookmarked(bookmarked)
                 .build();
     }
 }
