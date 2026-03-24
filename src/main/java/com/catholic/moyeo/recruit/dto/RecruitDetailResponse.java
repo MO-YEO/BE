@@ -17,6 +17,7 @@ import java.util.List;
  *     "type": ...,
  *     "category": ...,
  *     "tag": ...,
+ *     "department": ...,
  *     "title": ...,
  *     "content": ...,
  *     "skills": [...],
@@ -35,9 +36,19 @@ import java.util.List;
  *   "applicantCount": ...
  * }
  *
+ * 카테고리 2단계 정책:
+ * - type     = 1차 필터(ActivityCategory)
+ * - category = 2차 필터(RecruitCategory)
+ *
+ * 레거시/호환 정책:
+ * - 기존 응답 스키마와 프론트 호환을 위해 type/category 필드는 유지한다.
+ * - 추가로 activityCategory/recruitCategory alias getter를 제공한다.
+ *
  * NOTE:
  * - author 정보는 recruit_post 컬럼이 아니라 별도 Member 조회 결과를 서비스에서 주입한다.
  * - profileImageUrl은 현재 범위에서 제외한다.
+ * - department는 모집글 작성 시 사용자가 선택적으로 입력한 표시용 문자열이다.
+ * - department는 분류/검색/필터 용도로 사용하지 않는다.
  */
 public class RecruitDetailResponse {
 
@@ -58,6 +69,7 @@ public class RecruitDetailResponse {
         recruit.type = post.getType();
         recruit.category = post.getCategory();
         recruit.tag = post.getTag();
+        recruit.department = post.getDepartment();
         recruit.title = post.getTitle();
         recruit.content = post.getContent();
         recruit.skills = skills;
@@ -84,9 +96,21 @@ public class RecruitDetailResponse {
      */
     public static class Recruit {
         private Long recruitId;
+
+        /**
+         * 1차 카테고리
+         * - ActivityCategory Enum name 저장값
+         */
         private String type;
+
+        /**
+         * 2차 카테고리
+         * - RecruitCategory Enum name 저장값
+         */
         private String category;
+
         private String tag;
+        private String department;
         private String title;
         private String content;
         private List<String> skills;
@@ -101,6 +125,7 @@ public class RecruitDetailResponse {
         public String getType() { return type; }
         public String getCategory() { return category; }
         public String getTag() { return tag; }
+        public String getDepartment() { return department; }
         public String getTitle() { return title; }
         public String getContent() { return content; }
         public List<String> getSkills() { return skills; }
@@ -110,5 +135,17 @@ public class RecruitDetailResponse {
         public RecruitAuthorResponse getAuthor() { return author; }
         public LocalDateTime getCreatedAt() { return createdAt; }
         public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+        /**
+         * alias getter
+         * - activityCategory == type
+         */
+        public String getActivityCategory() { return type; }
+
+        /**
+         * alias getter
+         * - recruitCategory == category
+         */
+        public String getRecruitCategory() { return category; }
     }
 }

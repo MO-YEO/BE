@@ -32,8 +32,8 @@ import org.springframework.web.bind.annotation.*;
  * - 그러나 백엔드는 항상 query filter를 지원하도록 구현한다.
  *
  *
- * 2) 값 고정 정책 (type / category / status)
- * - type, category
+ * 2) 값 고정 정책 (activityCategory / recruitCategory / status)
+ * - activityCategory(1차 필터), recruitCategory(2차 필터)
  *   - DB에는 VARCHAR로 저장한다.
  *   - DTO에서는 String으로 받고,
  *   - 서비스에서 허용 값 검증 및 정규화를 수행한다.
@@ -129,6 +129,28 @@ import org.springframework.web.bind.annotation.*;
  *
  * - applicant_count == total_headcount
  *   → 서비스에서 자동으로 status = CLOSED 전환한다.
+ *
+ *
+ * ==============================
+ * [카테고리 2단계 필터 정책]
+ * ==============================
+ *
+ * 1) activityCategory
+ * - 1차 필터
+ * - ActivityCategory Enum 기반
+ * - 예: PROJECT, CONTEST, STUDY, ACADEMIC
+ *
+ * 2) recruitCategory
+ * - 2차 필터
+ * - RecruitCategory Enum 기반
+ * - 예: PLAN, DEVELOP, DESIGN, MARKETING, ETC
+ *
+ * 3) 레거시 호환
+ * - 기존 프론트/테스트 호환을 위해
+ *   목록 조회에서는 type/activityCategory, category/recruitCategory를
+ *   당분간 함께 받는다.
+ * - 생성/수정 DTO도 현재는 기존 필드명(type, category)을 유지하되,
+ *   의미만 각각 1차/2차 카테고리로 해석한다.
  */
 @RestController
 @RequestMapping("/api/recruits")
@@ -144,8 +166,10 @@ public class RecruitController {
      * 모집글 목록 조회 + 필터/검색
      *
      * Query:
-     * - type: (optional)
-     * - category: (optional)
+     * - activityCategory: (optional) 1차 필터
+     * - recruitCategory: (optional) 2차 필터
+     * - type: (optional, legacy alias of activityCategory)
+     * - category: (optional, legacy alias of recruitCategory)
      * - status: (optional) OPEN / CLOSED
      * - keyword: (optional)
      * - skills: (optional) CSV 문자열
@@ -157,6 +181,8 @@ public class RecruitController {
      */
     @GetMapping
     public ResponseEntity<RecruitListResponse> list(
+            @RequestParam(required = false) String activityCategory,
+            @RequestParam(required = false) String recruitCategory,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String status,
@@ -164,7 +190,18 @@ public class RecruitController {
             @RequestParam(required = false) String skills,
             Pageable pageable
     ) {
-        Page<RecruitSummaryResponse> page = recruitService.list(type, category, status, keyword, skills, pageable);
+        String resolvedActivityCategory = firstNonBlank(activityCategory, type);
+        String resolvedRecruitCategory = firstNonBlank(recruitCategory, category);
+
+        Page<RecruitSummaryResponse> page = recruitService.list(
+                resolvedActivityCategory,
+                resolvedRecruitCategory,
+                status,
+                keyword,
+                skills,
+                pageable
+        );
+
         return ResponseEntity.ok(RecruitListResponse.from(page));
     }
 
@@ -191,6 +228,11 @@ public class RecruitController {
      * - status는 OPEN으로 시작한다.
      * - applicantCount 초기값은 서버 정책에 따라 설정한다.
      *
+     * 주의:
+     * - 현재 DTO 필드명은 기존 호환을 위해 유지한다.
+     *   req.type     -> activityCategory(1차 필터)
+     *   req.category -> recruitCategory(2차 필터)
+     *
      * Response:
      * - 모집글 상세 조회 응답과 동일 shape
      */
@@ -205,6 +247,11 @@ public class RecruitController {
      * 정책:
      * - null 필드는 미수정
      * - totalHeadcount를 applicantCount보다 작게 줄이려 하면 400
+     *
+     * 주의:
+     * - 현재 DTO 필드명은 기존 호환을 위해 유지한다.
+     *   req.type     -> activityCategory(1차 필터)
+     *   req.category -> recruitCategory(2차 필터)
      */
     @PatchMapping("/{recruitId}")
     public ResponseEntity<RecruitDetailResponse> update(
@@ -322,5 +369,22 @@ public class RecruitController {
     public ResponseEntity<MyAppliedRecruitListResponse> myApplied(Pageable pageable) {
         Page<MyAppliedRecruitResponse> page = recruitService.myApplied(pageable);
         return ResponseEntity.ok(MyAppliedRecruitListResponse.from(page));
+    }
+
+    /**
+     * 앞에서 전달된 값 중 첫 번째 non-blank 값을 반환한다.
+     *
+     * 사용처:
+     * - 신규 파라미터(activityCategory, recruitCategory) 우선 사용
+     * - 레거시 alias(type, category)는 보조 수단으로만 사용
+     */
+    private String firstNonBlank(String preferred, String legacy) {
+        if (preferred != null && !preferred.trim().isEmpty()) {
+            return preferred;
+        }
+        if (legacy != null && !legacy.trim().isEmpty()) {
+            return legacy;
+        }
+        return null;
     }
 }
