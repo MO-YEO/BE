@@ -1,5 +1,7 @@
 package com.catholic.moyeo.recruit.service;
 
+import com.catholic.moyeo.common.domain.ActivityCategory;
+import com.catholic.moyeo.common.domain.RecruitCategory;
 import com.catholic.moyeo.recruit.domain.RecruitApplication;
 import com.catholic.moyeo.recruit.domain.RecruitApplicationStatus;
 import com.catholic.moyeo.recruit.domain.RecruitPost;
@@ -80,6 +82,23 @@ public class RecruitService {
      * - Recruit 모듈은 memberId(userId)만 보관하므로,
      *   RecruitMemberReader를 통해 Member 정보를 조회해서 조합한다.
      *
+     * [카테고리 2단계 정책]
+     * - activityCategory: 1차 필터 (ActivityCategory)
+     * - recruitCategory: 2차 필터 (RecruitCategory)
+     *
+     * - 현재 DTO 필드명은 기존 호환을 위해 유지한다.
+     *   create/update 요청에서는
+     *   req.type     -> activityCategory
+     *   req.category -> recruitCategory
+     *
+     * - 현재 DB 컬럼명도 기존 호환을 위해 유지한다.
+     *   type 컬럼     -> activityCategory 저장
+     *   category 컬럼 -> recruitCategory 저장
+     *
+     * [표시용 선택값]
+     * - department는 사용자가 원할 때만 입력하는 표시용 문자열이다.
+     * - 분류/검색/필터에는 사용하지 않는다.
+     *
      * NOTE:
      * - 현재 목록 조회 시 author를 각 게시글마다 개별 조회하므로 N+1 가능성이 있다.
      * - 현재 지원자 목록 조회 시 applicant도 각 row마다 개별 조회하므로 N+1 가능성이 있다.
@@ -109,16 +128,23 @@ public class RecruitService {
      *
      * 정책:
      * - 작성자는 항상 현재 로그인 사용자다.
-     * - type/category는 여기서 정규화한다.
+     * - activityCategory / recruitCategory는 여기서 정규화한다.
      * - skills는 DB에 CSV 형태로 저장한다.
+     * - department는 선택 입력값이며, 저장 전에 trim 처리한다.
      * - 생성 직후 상세 응답 포맷으로 반환한다.
+     *
+     * 주의:
+     * - 현재 DTO 필드명은 기존 호환을 위해 유지한다.
+     *   req.type       -> activityCategory
+     *   req.category   -> recruitCategory
+     *   req.department -> department
      */
     @Transactional
     public RecruitDetailResponse create(RecruitCreateRequest req) {
         Long me = AuthUtil.currentMemberId();
 
-        String normalizedType = normalizeTypeOrThrow(req.getType());
-        String normalizedCategory = normalizeCategoryOrThrow(req.getCategory());
+        String normalizedActivityCategory = normalizeActivityCategoryOrThrow(req.getType());
+        String normalizedRecruitCategory = normalizeRecruitCategoryOrThrow(req.getCategory());
 
         if (req.getTotalHeadcount() == null || req.getTotalHeadcount() <= 0) {
             throw new IllegalArgumentException("totalHeadcount must be positive");
@@ -128,9 +154,10 @@ public class RecruitService {
 
         RecruitPost post = new RecruitPost(
                 me,
-                normalizedType,
-                normalizedCategory,
+                normalizedActivityCategory,
+                normalizedRecruitCategory,
                 trimToNull(req.getTag()),
+                trimToNull(req.getDepartment()),
                 req.getTitle(),
                 req.getContent(),
                 csvSkills,
@@ -156,36 +183,41 @@ public class RecruitService {
      * 모집글 목록 조회
      *
      * 필터 규칙:
-     * - type/category/status/keyword/skillsCsv 모두 선택적이다.
+     * - activityCategory / recruitCategory / status / keyword / skillsCsv 모두 선택적이다.
      * - keyword는 title/content OR 검색이다.
      * - skillsCsv는 requiredSkills CSV 문자열에 대한 LIKE 기반 검색이다.
      *
      * 주의:
      * - appliedByMe 계산을 위해 현재 사용자 기준 application 존재 여부를 확인한다.
      * - author 정보는 응답 조합 시점에 조회한다.
+     * - department는 필터에 사용하지 않고, 응답 표시값으로만 내려준다.
      */
     @Transactional(readOnly = true)
     public Page<RecruitSummaryResponse> list(
-            String type,
-            String category,
+            String activityCategory,
+            String recruitCategory,
             String status,
             String keyword,
             String skillsCsv,
             Pageable pageable
     ) {
-        String normalizedType = hasText(type) ? normalizeTypeOrThrow(type) : null;
-        String normalizedCategory = hasText(category) ? normalizeCategoryOrThrow(category) : null;
+        String normalizedActivityCategory = hasText(activityCategory)
+                ? normalizeActivityCategoryOrThrow(activityCategory)
+                : null;
+        String normalizedRecruitCategory = hasText(recruitCategory)
+                ? normalizeRecruitCategoryOrThrow(recruitCategory)
+                : null;
         RecruitPostStatus postStatus = parsePostStatusOrNull(status);
         List<String> skills = parseSkillsCsv(skillsCsv);
 
         Specification<RecruitPost> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            if (normalizedType != null) {
-                predicates.add(cb.equal(root.get("type"), normalizedType));
+            if (normalizedActivityCategory != null) {
+                predicates.add(cb.equal(root.get("activityCategory"), normalizedActivityCategory));
             }
-            if (normalizedCategory != null) {
-                predicates.add(cb.equal(root.get("category"), normalizedCategory));
+            if (normalizedRecruitCategory != null) {
+                predicates.add(cb.equal(root.get("recruitCategory"), normalizedRecruitCategory));
             }
             if (postStatus != null) {
                 predicates.add(cb.equal(root.get("status"), postStatus));
@@ -228,6 +260,7 @@ public class RecruitService {
      * 주의:
      * - author는 항상 조합해서 내려준다.
      * - appliedByMe는 현재 사용자 기준으로 계산한다.
+     * - department는 표시용 값이므로 post에서 그대로 내려준다.
      */
     @Transactional(readOnly = true)
     public RecruitDetailResponse get(Long recruitId) {
@@ -257,6 +290,13 @@ public class RecruitService {
      * - null 필드는 수정하지 않는다.
      * - totalHeadcount는 현재 applicantCount보다 작게 줄일 수 없다.
      * - 정원 변경 후 가득 찼다면 자동 마감한다.
+     * - department는 선택 입력값이며, 들어오면 trim 후 저장한다.
+     *
+     * 주의:
+     * - 현재 DTO 필드명은 기존 호환을 위해 유지한다.
+     *   req.type       -> activityCategory
+     *   req.category   -> recruitCategory
+     *   req.department -> department
      */
     @Transactional
     public RecruitDetailResponse update(Long recruitId, RecruitUpdateRequest req) {
@@ -268,13 +308,16 @@ public class RecruitService {
         ensureAuthor(post, me);
 
         if (req.getType() != null) {
-            post.setType(normalizeTypeOrThrow(req.getType()));
+            post.setActivityCategory(normalizeActivityCategoryOrThrow(req.getType()));
         }
         if (req.getCategory() != null) {
-            post.setCategory(normalizeCategoryOrThrow(req.getCategory()));
+            post.setRecruitCategory(normalizeRecruitCategoryOrThrow(req.getCategory()));
         }
         if (req.getTag() != null) {
             post.setTag(trimToNull(req.getTag()));
+        }
+        if (req.getDepartment() != null) {
+            post.setDepartment(trimToNull(req.getDepartment()));
         }
         if (req.getTitle() != null) {
             post.setTitle(req.getTitle());
@@ -698,57 +741,27 @@ public class RecruitService {
     }
 
     /**
-     * type 정규화
+     * activityCategory 정규화
      *
-     * 현재 정책:
-     * - 공백 제거
-     * - 대문자 정규화
-     *
-     * TODO:
-     * - 명세 최종 Enum 허용값 확정 시 whitelist 검증 추가
+     * 정책:
+     * - ActivityCategory Enum 허용값만 받는다.
+     * - 영문 Enum name / 한글 label 모두 허용한다.
+     * - 저장 시에는 Enum name 대문자 값으로 정규화한다.
      */
-    private String normalizeTypeOrThrow(String type) {
-        if (!hasText(type)) {
-            throw new IllegalArgumentException("type is required");
-        }
-
-        String normalized = type.trim().toUpperCase(Locale.ROOT);
-
-        /*
-         * 주의:
-         * - 여기서는 최소한 공백 제거 + 대문자 정규화는 강제한다.
-         * - 명세의 최종 허용값(Enum 목록)이 확정되면 아래에 whitelist 검증을 추가해야
-         *   진짜 100% 명세 고정 검증이 된다.
-         *
-         * 예:
-         * Set.of("PROJECT", "CONTEST", "STUDY")
-         */
-        return normalized;
+    private String normalizeActivityCategoryOrThrow(String activityCategory) {
+        return ActivityCategory.from(activityCategory).name();
     }
 
     /**
-     * category 정규화
+     * recruitCategory 정규화
      *
-     * 현재 정책:
-     * - 공백 제거
-     * - 대문자 정규화
-     *
-     * TODO:
-     * - 명세 최종 Enum 허용값 확정 시 whitelist 검증 추가
+     * 정책:
+     * - RecruitCategory Enum 허용값만 받는다.
+     * - 영문 Enum name / 한글 label 모두 허용한다.
+     * - 저장 시에는 Enum name 대문자 값으로 정규화한다.
      */
-    private String normalizeCategoryOrThrow(String category) {
-        if (!hasText(category)) {
-            throw new IllegalArgumentException("category is required");
-        }
-
-        String normalized = category.trim().toUpperCase(Locale.ROOT);
-
-        /*
-         * 주의:
-         * - 명세의 최종 허용값(Enum 목록)이 확정되면 whitelist 검증을 추가해야 한다.
-         * - 현재는 공백 제거 + 대문자 정규화만 수행한다.
-         */
-        return normalized;
+    private String normalizeRecruitCategoryOrThrow(String recruitCategory) {
+        return RecruitCategory.from(recruitCategory).name();
     }
 
     /**
@@ -883,7 +896,7 @@ public class RecruitService {
      * 문자열 trim 후 비어 있으면 null 처리
      *
      * 사용처:
-     * - 선택값(tag 등)의 저장 전 정리
+     * - 선택값(tag, department 등)의 저장 전 정리
      */
     private String trimToNull(String value) {
         if (value == null) {

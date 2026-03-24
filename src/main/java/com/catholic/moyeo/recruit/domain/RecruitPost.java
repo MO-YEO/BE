@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * - deadline 지난 경우: 서비스에서 행위 시점에 차단(400). (스케줄러로 CLOSED 처리하는 건 선택)
  *
  * 값 고정 정책(중요):
- * - type/category는 "허용 값 고정" 대상이지만, DB는 VARCHAR 유지
+ * - activityCategory / recruitCategory는 "허용 값 고정" 대상이지만, DB는 VARCHAR 유지
  * - 따라서 엔티티는 String을 유지하고, 서비스에서 허용 값 검증/정규화 후 저장한다.
  *
  * 상태 정책(중요):
@@ -25,11 +25,23 @@ import java.time.LocalDateTime;
  * - tag는 표시만 한다. (필터/검색 X)
  *   (추후 다중 태그가 필요하면 ERD 변경 + 테이블 분리 등 재설계 필요)
  *
+ * department 정책(중요):
+ * - department는 표시만 한다. (분류/검색/필터 X)
+ * - 사용자가 원할 때만 입력하는 선택값이다.
+ *
  * 도메인 방어 정책(추가):
  * - total_headcount는 1 이상이어야 한다.
  * - total_headcount는 applicant_count보다 작아질 수 없다.
  * - applicant_count 증가 시 정원 초과는 허용하지 않는다.
  * - applicant_count 감소 시 작성자 포함 정책상 최소 1을 유지한다.
+ *
+ * 레거시 호환 정책(중요):
+ * - 현재 DB 컬럼명은 기존 호환을 위해 유지한다.
+ *   type 컬럼     -> activityCategory 저장
+ *   category 컬럼 -> recruitCategory 저장
+ *
+ * - 또한 기존 DTO/응답 조립 코드 호환을 위해
+ *   getType()/setType(), getCategory()/setCategory() alias를 함께 제공한다.
  */
 @Entity
 @Table(name = "recruit_post")
@@ -43,11 +55,25 @@ public class RecruitPost {
     @Column(name = "author_user_id", nullable = false)
     private Long authorUserId;
 
+    /**
+     * 1차 카테고리
+     * - ActivityCategory Enum name 저장
+     *
+     * 주의:
+     * - DB 컬럼명은 기존 호환을 위해 type 유지
+     */
     @Column(name = "type", nullable = false, length = 50)
-    private String type;
+    private String activityCategory;
 
+    /**
+     * 2차 카테고리
+     * - RecruitCategory Enum name 저장
+     *
+     * 주의:
+     * - DB 컬럼명은 기존 호환을 위해 category 유지
+     */
     @Column(name = "category", nullable = false, length = 50)
-    private String category;
+    private String recruitCategory;
 
     /**
      * 표시용 단일 태그 (예: "AfterEffects")
@@ -55,6 +81,14 @@ public class RecruitPost {
      */
     @Column(name = "tag", length = 50)
     private String tag;
+
+    /**
+     * 표시용 학과 문자열
+     * - 분류/검색/필터 파라미터에서는 사용하지 않음
+     * - 사용자가 원할 때만 입력하는 선택값
+     */
+    @Column(name = "department", length = 50)
+    private String department;
 
     @Column(name = "title", nullable = false, length = 120)
     private String title;
@@ -91,18 +125,20 @@ public class RecruitPost {
     protected RecruitPost() {}
 
     public RecruitPost(Long authorUserId,
-                       String type,
-                       String category,
+                       String activityCategory,
+                       String recruitCategory,
                        String tag,
+                       String department,
                        String title,
                        String content,
                        String requiredSkills,
                        short totalHeadcount,
                        LocalDate deadline) {
         this.authorUserId = authorUserId;
-        this.type = type;
-        this.category = category;
+        this.activityCategory = activityCategory;
+        this.recruitCategory = recruitCategory;
         this.tag = tag;
+        this.department = department;
         this.title = title;
         this.content = content;
         this.requiredSkills = requiredSkills;
@@ -137,9 +173,31 @@ public class RecruitPost {
 
     public Long getId() { return id; }
     public Long getAuthorUserId() { return authorUserId; }
-    public String getType() { return type; }
-    public String getCategory() { return category; }
+
+    /**
+     * 1차 카테고리 getter
+     */
+    public String getActivityCategory() { return activityCategory; }
+
+    /**
+     * 2차 카테고리 getter
+     */
+    public String getRecruitCategory() { return recruitCategory; }
+
+    /**
+     * 레거시 호환 getter
+     * - 기존 코드/DTO에서 getType()을 호출하면 1차 카테고리를 반환한다.
+     */
+    public String getType() { return activityCategory; }
+
+    /**
+     * 레거시 호환 getter
+     * - 기존 코드/DTO에서 getCategory()를 호출하면 2차 카테고리를 반환한다.
+     */
+    public String getCategory() { return recruitCategory; }
+
     public String getTag() { return tag; }
+    public String getDepartment() { return department; }
     public String getTitle() { return title; }
     public String getContent() { return content; }
     public String getRequiredSkills() { return requiredSkills; }
@@ -150,9 +208,30 @@ public class RecruitPost {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
-    public void setType(String type) { this.type = type; }
-    public void setCategory(String category) { this.category = category; }
+    /**
+     * 1차 카테고리 setter
+     */
+    public void setActivityCategory(String activityCategory) { this.activityCategory = activityCategory; }
+
+    /**
+     * 2차 카테고리 setter
+     */
+    public void setRecruitCategory(String recruitCategory) { this.recruitCategory = recruitCategory; }
+
+    /**
+     * 레거시 호환 setter
+     * - 기존 코드에서 setType(...)을 호출하면 1차 카테고리를 갱신한다.
+     */
+    public void setType(String type) { this.activityCategory = type; }
+
+    /**
+     * 레거시 호환 setter
+     * - 기존 코드에서 setCategory(...)을 호출하면 2차 카테고리를 갱신한다.
+     */
+    public void setCategory(String category) { this.recruitCategory = category; }
+
     public void setTag(String tag) { this.tag = tag; }
+    public void setDepartment(String department) { this.department = department; }
     public void setTitle(String title) { this.title = title; }
     public void setContent(String content) { this.content = content; }
     public void setRequiredSkills(String requiredSkills) { this.requiredSkills = requiredSkills; }

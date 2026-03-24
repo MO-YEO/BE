@@ -25,12 +25,22 @@ import java.util.Map;
  * - 인증 실패(401)는 Security 레이어에서 처리한다.
  * - Validation 실패는 message + errors 구조
  * - 일반 정책 위반은 message 단일 필드
+ *
+ * 카테고리 2단계 정책:
+ * - ActivityCategory(1차 필터), RecruitCategory(2차 필터) 검증 실패는
+ *   서비스에서 IllegalArgumentException으로 처리하고 여기서 400으로 응답한다.
  */
 @RestControllerAdvice(basePackages = "com.catholic.moyeo.recruit")
 public class RecruitExceptionHandler {
 
     /**
      * 잘못된 값 / 정책 위반 -> 400
+     *
+     * 예:
+     * - 허용되지 않은 activityCategory
+     * - 허용되지 않은 recruitCategory
+     * - status 잘못된 값
+     * - totalHeadcount 정책 위반
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> badRequest(IllegalArgumentException e) {

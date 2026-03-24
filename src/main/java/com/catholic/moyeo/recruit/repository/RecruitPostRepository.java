@@ -17,6 +17,14 @@ import java.util.Optional;
  * - 승인/취소 등 applicant_count 조정이 발생하는 경쟁 구간은
  *   PESSIMISTIC_WRITE lock으로 보호한다.
  *
+ * 카테고리 2단계 정책:
+ * - DB 컬럼명은 기존 호환을 위해 유지한다.
+ *   type     -> ActivityCategory(1차 필터)
+ *   category -> RecruitCategory(2차 필터)
+ *
+ * - 목록 조건식은 Repository 메서드 분기 대신
+ *   서비스의 Specification 로직 하나로만 유지한다.
+ *
  * NOTE(팀 공유):
  * - search() default 메서드는 현재 서비스 구현에서 사용하지 않으므로 제거했다.
  *   목록 조건식은 서비스의 Specification 로직 하나로만 유지한다.
