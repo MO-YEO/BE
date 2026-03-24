@@ -239,4 +239,17 @@ public class MemberService {
                 )
                 .build();
     }
+
+
+    @Transactional
+    public void updateProfileImage(Long memberId, String url) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("회원 없음"));
+
+        member.updateProfile(
+                null,
+                url,
+                null, null, null, null, null
+        );
+    }
 }

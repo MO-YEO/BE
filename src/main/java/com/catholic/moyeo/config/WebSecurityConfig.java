@@ -62,10 +62,10 @@ public class WebSecurityConfig {
                                 "/oauth/**",
                                 "/oauth/callback",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/v3/api-docs/**",
+                                "/uploads/**"
                         ).permitAll()
-                        .anyRequest().permitAll()
-                )
+                        .anyRequest().authenticated()                )
 
                 // OAuth2 로그인 설정
                 .oauth2Login(oauth -> oauth
@@ -94,4 +94,6 @@ public class WebSecurityConfig {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
+
+
 }
