@@ -1,6 +1,7 @@
 package com.catholic.moyeo.board.service;
 
 import com.catholic.moyeo.board.domain.BoardPost;
+import com.catholic.moyeo.board.domain.BoardPostImage;
 import com.catholic.moyeo.board.dto.BoardAuthorResponse;
 import com.catholic.moyeo.board.dto.BoardCreateRequest;
 import com.catholic.moyeo.board.dto.BoardDetailResponse;
@@ -9,6 +10,7 @@ import com.catholic.moyeo.board.dto.BoardSummaryResponse;
 import com.catholic.moyeo.board.dto.BoardUpdateRequest;
 import com.catholic.moyeo.board.dto.PageInfoResponse;
 import com.catholic.moyeo.board.repository.BoardCommentRepository;
+import com.catholic.moyeo.board.repository.BoardPostImageRepository;
 import com.catholic.moyeo.board.repository.BoardPostLikeRepository;
 import com.catholic.moyeo.board.repository.BoardPostRepository;
 import org.springframework.data.domain.Page;
@@ -16,10 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 게시글 서비스
@@ -39,18 +38,20 @@ public class BoardService {
     private final BoardAuthorReader boardAuthorReader;
     private final BoardPostLikeRepository boardPostLikeRepository;
     private final BoardCommentRepository boardCommentRepository;
-
+    private final BoardPostImageRepository boardPostImageRepository;
 
     public BoardService(
             BoardPostRepository boardPostRepository,
             BoardAuthorReader boardAuthorReader,
             BoardPostLikeRepository boardPostLikeRepository,
-            BoardCommentRepository boardCommentRepository
+            BoardCommentRepository boardCommentRepository,
+            BoardPostImageRepository boardPostImageRepository
     ) {
         this.boardPostRepository = boardPostRepository;
         this.boardAuthorReader = boardAuthorReader;
         this.boardPostLikeRepository = boardPostLikeRepository;
         this.boardCommentRepository = boardCommentRepository;
+        this.boardPostImageRepository = boardPostImageRepository;
     }
 
     /**
@@ -79,11 +80,13 @@ public class BoardService {
         BoardAuthorResponse author = boardAuthorReader.getAuthor(post.getAuthorUserId());
 
         long likeCount = boardPostLikeRepository.countByBoardPostId(post.getId());
-
         long commentCount = boardCommentRepository.countByBoardPostId(post.getId());
 
         boolean likedByMe = (me != null) &&
                 boardPostLikeRepository.existsByBoardPostIdAndUserId(post.getId(), me);
+
+        //  이미지 조회 추가
+        List<String> images = getImages(post.getId());
 
         return BoardDetailResponse.from(
                 post.getId(),
@@ -95,7 +98,8 @@ public class BoardService {
                 post.getAuthorUserId().equals(me),
                 likeCount,
                 commentCount,
-                likedByMe
+                likedByMe,
+                images   // 추가
         );
     }
 
@@ -104,6 +108,7 @@ public class BoardService {
      */
     @Transactional
     public BoardDetailResponse createPost(Long me, BoardCreateRequest request) {
+
         BoardPost saved = boardPostRepository.save(
                 new BoardPost(
                         me,
@@ -112,11 +117,21 @@ public class BoardService {
                 )
         );
 
+        //  이미지 저장
+        if (request.getImages() != null) {
+            for (String url : request.getImages()) {
+                boardPostImageRepository.save(
+                        new BoardPostImage(saved.getId(), url)
+                );
+            }
+        }
+
         BoardAuthorResponse author = boardAuthorReader.getAuthor(saved.getAuthorUserId());
 
         long likeCount = boardPostLikeRepository.countByBoardPostId(saved.getId());
         long commentCount = boardCommentRepository.countByBoardPostId(saved.getId());
-        boolean likedByMe = false;
+
+        List<String> images = getImages(saved.getId());
 
         return BoardDetailResponse.from(
                 saved.getId(),
@@ -128,7 +143,8 @@ public class BoardService {
                 true,
                 likeCount,
                 commentCount,
-                likedByMe
+                false,
+                images   //  추가
         );
     }
 
@@ -148,12 +164,26 @@ public class BoardService {
                 trimToNull(request.getContent())
         );
 
+        //  기존 이미지 삭제 후 다시 저장
+        if (request.getImages() != null) {
+            boardPostImageRepository.deleteByPostId(postId);
+
+            for (String url : request.getImages()) {
+                boardPostImageRepository.save(
+                        new BoardPostImage(postId, url)
+                );
+            }
+        }
+
         BoardAuthorResponse author = boardAuthorReader.getAuthor(post.getAuthorUserId());
 
         long likeCount = boardPostLikeRepository.countByBoardPostId(post.getId());
         long commentCount = boardCommentRepository.countByBoardPostId(post.getId());
+
         boolean likedByMe = (me != null) &&
                 boardPostLikeRepository.existsByBoardPostIdAndUserId(post.getId(), me);
+
+        List<String> images = getImages(post.getId());
 
         return BoardDetailResponse.from(
                 post.getId(),
@@ -165,7 +195,8 @@ public class BoardService {
                 true,
                 likeCount,
                 commentCount,
-                likedByMe
+                likedByMe,
+                images   //  추가
         );
     }
 
@@ -178,6 +209,10 @@ public class BoardService {
     public void deletePost(Long me, Long postId) {
         BoardPost post = getPostEntity(postId);
         ensureAuthor(post, me);
+
+        //  이미지도 같이 삭제
+        boardPostImageRepository.deleteByPostId(postId);
+
         boardPostRepository.delete(post);
     }
 
@@ -242,6 +277,18 @@ public class BoardService {
                 .toList();
     }
 
+    //  이미지 조회
+    private List<String> getImages(Long postId) {
+        List<BoardPostImage> images = boardPostImageRepository.findByPostId(postId);
+
+        List<String> result = new ArrayList<>();
+        for (BoardPostImage img : images) {
+            result.add(img.getImageUrl());
+        }
+        return result;
+    }
+
+
     private String normalizeKeyword(String keyword) {
         if (keyword == null) {
             return null;
@@ -257,4 +304,6 @@ public class BoardService {
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
+
+
 }

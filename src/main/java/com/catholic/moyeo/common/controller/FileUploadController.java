@@ -32,4 +32,12 @@ public class FileUploadController {
 
         return ResponseEntity.ok(Map.of("url", url));
     }
+
+    @PostMapping("/image")
+    public ResponseEntity<Map<String, String>> uploadImage(
+            @RequestParam("file") MultipartFile file
+    ) {
+        String url = fileUploadService.uploadOriginal(file, "board");
+        return ResponseEntity.ok(Map.of("url", url));
+    }
 }
