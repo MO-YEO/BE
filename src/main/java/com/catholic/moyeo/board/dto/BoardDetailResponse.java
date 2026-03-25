@@ -1,6 +1,7 @@
 package com.catholic.moyeo.board.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 게시글 상세 응답
@@ -22,6 +23,8 @@ public class BoardDetailResponse {
     private final long commentCount;
     private final boolean likedByMe;
 
+    private final List<String> images;
+
     public BoardDetailResponse(
             Long postId,
             String title,
@@ -32,7 +35,9 @@ public class BoardDetailResponse {
             boolean mine,
             long likeCount,
             long commentCount,
-            boolean likedByMe
+            boolean likedByMe,
+            List<String> images
+
     ) {
         this.postId = postId;
         this.title = title;
@@ -44,6 +49,7 @@ public class BoardDetailResponse {
         this.likeCount = likeCount;
         this.commentCount = commentCount;
         this.likedByMe = likedByMe;
+        this.images = images;
     }
 
     public static BoardDetailResponse from(
@@ -56,7 +62,8 @@ public class BoardDetailResponse {
             boolean mine,
             long likeCount,
             long commentCount,
-            boolean likedByMe
+            boolean likedByMe,
+            List<String> images
     ) {
         return new BoardDetailResponse(
                 postId,
@@ -68,7 +75,8 @@ public class BoardDetailResponse {
                 mine,
                 likeCount,
                 commentCount,
-                likedByMe
+                likedByMe,
+                images
         );
     }
 
@@ -83,4 +91,5 @@ public class BoardDetailResponse {
     public long getLikeCount() { return likeCount; }
     public long getCommentCount() { return commentCount; }
     public boolean isLikedByMe() { return likedByMe; }
+    public List<String> getImages() { return images; }
 }
