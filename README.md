@@ -31,3 +31,6 @@ OAUTH2_REDIRECT_URL=https://moyeo.com/oauth/callback
 
 
 http://localhost:8080/oauth2/authorization/google
+
+
+http://localhost:8080/swagger-ui/index.html
