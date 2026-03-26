@@ -13,6 +13,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  *
  * recruit 스타일과 비슷하게
  * message 하나만 내려주는 단순 구조로 맞춘다.
+ *
+ * 현재 북마크 기능은
+ * - 존재하지 않는 게시글 접근 시 IllegalArgumentException
+ * - 작성자 권한 위반 시 IllegalStateException
+ * 구조를 그대로 사용한다.
  */
 @RestControllerAdvice(basePackages = "com.catholic.moyeo.board")
 public class BoardExceptionHandler {

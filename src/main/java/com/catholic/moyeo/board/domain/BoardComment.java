@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Table(name = "board_comment")
 public class BoardComment {
 
-    //닉네임은 댓글 데이터가 아니라 회원데이터라 안넣었음
+    // 닉네임은 댓글 데이터가 아니라 회원 데이터라 안 넣었음
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,19 +23,15 @@ public class BoardComment {
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(name = "parent_id")
-    private Long parentId; // 대댓글
-
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     protected BoardComment() {}
 
-    public BoardComment(Long boardPostId, Long userId, String content, Long parentId) {
+    public BoardComment(Long boardPostId, Long userId, String content) {
         this.boardPostId = boardPostId;
         this.userId = userId;
         this.content = content;
-        this.parentId = parentId;
     }
 
     @PrePersist
@@ -51,6 +47,5 @@ public class BoardComment {
     public Long getBoardPostId() { return boardPostId; }
     public Long getUserId() { return userId; }
     public String getContent() { return content; }
-    public Long getParentId() { return parentId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

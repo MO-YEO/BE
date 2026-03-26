@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 /**
  * 게시글 목록 응답
  *
- * 목록 / 내 게시글 목록에서 공통으로 사용한다.
+ * 목록 / 내 게시글 목록 / 북마크 목록에서 공통으로 사용한다.
  */
 public class BoardSummaryResponse {
 
@@ -17,6 +17,7 @@ public class BoardSummaryResponse {
     private final long likeCount;
     private final long commentCount;
     private final boolean likedByMe;
+    private final boolean bookmarkedByMe;
 
     public BoardSummaryResponse(
             Long postId,
@@ -25,7 +26,8 @@ public class BoardSummaryResponse {
             LocalDateTime createdAt,
             long likeCount,
             long commentCount,
-            boolean likedByMe
+            boolean likedByMe,
+            boolean bookmarkedByMe
     ) {
         this.postId = postId;
         this.title = title;
@@ -34,8 +36,8 @@ public class BoardSummaryResponse {
         this.likeCount = likeCount;
         this.commentCount = commentCount;
         this.likedByMe = likedByMe;
+        this.bookmarkedByMe = bookmarkedByMe;
     }
-
 
     public static BoardSummaryResponse from(
             Long postId,
@@ -44,11 +46,12 @@ public class BoardSummaryResponse {
             LocalDateTime createdAt,
             long likeCount,
             long commentCount,
-            boolean likedByMe
+            boolean likedByMe,
+            boolean bookmarkedByMe
     ) {
         return new BoardSummaryResponse(
                 postId, title, author, createdAt,
-                likeCount, commentCount, likedByMe
+                likeCount, commentCount, likedByMe, bookmarkedByMe
         );
     }
 
@@ -60,4 +63,5 @@ public class BoardSummaryResponse {
     public long getLikeCount() { return likeCount; }
     public long getCommentCount() { return commentCount; }
     public boolean isLikedByMe() { return likedByMe; }
+    public boolean isBookmarkedByMe() { return bookmarkedByMe; }
 }

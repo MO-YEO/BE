@@ -3,6 +3,5 @@ CREATE TABLE board_comment (
                                board_post_id BIGINT NOT NULL,
                                user_id BIGINT NOT NULL,
                                content TEXT NOT NULL,
-                               parent_id BIGINT,
                                created_at TIMESTAMP NOT NULL DEFAULT now()
 );

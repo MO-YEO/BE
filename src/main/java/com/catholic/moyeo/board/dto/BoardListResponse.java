@@ -7,6 +7,7 @@ import java.util.List;
  *
  * /api/boards/posts
  * /api/boards/posts/me
+ * /api/boards/posts/bookmarks
  * 에서 공통 사용한다.
  */
 public class BoardListResponse {
