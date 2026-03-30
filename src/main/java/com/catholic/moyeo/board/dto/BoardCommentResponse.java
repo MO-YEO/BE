@@ -1,23 +1,69 @@
 package com.catholic.moyeo.board.dto;
 
-import lombok.Builder;
-import lombok.Getter;
-
 import java.time.LocalDateTime;
 
-@Getter
-@Builder
+/**
+ * 댓글 응답
+ *
+ * 용도:
+ * - 댓글 조회/작성/수정 후 현재 댓글 정보를 반환한다.
+ *
+ * 필드:
+ * - commentId: 댓글 ID
+ * - content: 댓글 내용
+ * - author: 작성자 정보
+ * - mine: 현재 로그인 사용자가 작성한 댓글인지 여부
+ * - createdAt: 댓글 생성 시각
+ */
 public class BoardCommentResponse {
 
-    private Long commentId;
-    private String content;
+    private final Long commentId;
+    private final String content;
+    private final BoardAuthorResponse author;
+    private final boolean mine;
+    private final LocalDateTime createdAt;
 
-    private Long parentId;
+    public BoardCommentResponse(
+            Long commentId,
+            String content,
+            BoardAuthorResponse author,
+            boolean mine,
+            LocalDateTime createdAt
+    ) {
+        this.commentId = commentId;
+        this.content = content;
+        this.author = author;
+        this.mine = mine;
+        this.createdAt = createdAt;
+    }
 
-    private Long userId;
-    private String nickname;
+    public static BoardCommentResponse from(
+            Long commentId,
+            String content,
+            BoardAuthorResponse author,
+            boolean mine,
+            LocalDateTime createdAt
+    ) {
+        return new BoardCommentResponse(commentId, content, author, mine, createdAt);
+    }
 
-    private boolean mine; //내가 쓴 댓글인지 여부
+    public Long getCommentId() {
+        return commentId;
+    }
 
-    private LocalDateTime createdAt;
+    public String getContent() {
+        return content;
+    }
+
+    public BoardAuthorResponse getAuthor() {
+        return author;
+    }
+
+    public boolean isMine() {
+        return mine;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 }

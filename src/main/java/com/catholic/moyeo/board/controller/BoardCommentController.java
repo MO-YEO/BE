@@ -5,41 +5,45 @@ import com.catholic.moyeo.board.dto.CommentCreateRequest;
 import com.catholic.moyeo.board.dto.CommentUpdateRequest;
 import com.catholic.moyeo.board.service.BoardCommentService;
 import com.catholic.moyeo.board.service.CurrentUserProvider;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
-@RequestMapping("/api/boards/posts")
+@RequestMapping("/api/boards")
 @RequiredArgsConstructor
 public class BoardCommentController {
 
     private final BoardCommentService boardCommentService;
     private final CurrentUserProvider currentUserProvider;
 
-    // 댓글 작성 (대댓글 포함)
-    @PostMapping("/{postId}/comments")
-    public ResponseEntity<Void> create(
+    /**
+     * 댓글 작성
+     */
+    @PostMapping("/posts/{postId}/comments")
+    public ResponseEntity<BoardCommentResponse> create(
             @PathVariable Long postId,
-            @RequestBody CommentCreateRequest request
+            @Valid @RequestBody CommentCreateRequest request
     ) {
         Long me = currentUserProvider.getCurrentUserId();
 
-        boardCommentService.create(
+        BoardCommentResponse response = boardCommentService.create(
                 me,
                 postId,
-                request.getContent(),
-                request.getParentId()
+                request.getContent()
         );
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // 댓글 조회
-    @GetMapping("/{postId}/comments")
+    /**
+     * 댓글 조회
+     */
+    @GetMapping("/posts/{postId}/comments")
     public ResponseEntity<List<BoardCommentResponse>> getComments(
             @PathVariable Long postId
     ) {
@@ -47,7 +51,9 @@ public class BoardCommentController {
         return ResponseEntity.ok(boardCommentService.getComments(postId, me));
     }
 
-    // 댓글 삭제
+    /**
+     * 댓글 삭제
+     */
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<Void> delete(@PathVariable Long commentId) {
         Long me = currentUserProvider.getCurrentUserId();
@@ -55,14 +61,22 @@ public class BoardCommentController {
         return ResponseEntity.noContent().build();
     }
 
-    //댓글 수정
+    /**
+     * 댓글 수정
+     */
     @PutMapping("/comments/{commentId}")
-    public ResponseEntity<Void> update(
+    public ResponseEntity<BoardCommentResponse> update(
             @PathVariable Long commentId,
-            @RequestBody CommentUpdateRequest request
+            @Valid @RequestBody CommentUpdateRequest request
     ) {
         Long me = currentUserProvider.getCurrentUserId();
-        boardCommentService.update(me, commentId, request.getContent());
-        return ResponseEntity.ok().build();
+
+        BoardCommentResponse response = boardCommentService.update(
+                me,
+                commentId,
+                request.getContent()
+        );
+
+        return ResponseEntity.ok(response);
     }
 }

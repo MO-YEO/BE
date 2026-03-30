@@ -22,6 +22,7 @@ public class BoardDetailResponse {
     private final long likeCount;
     private final long commentCount;
     private final boolean likedByMe;
+    private final boolean bookmarkedByMe;
 
     private final List<String> images;
 
@@ -36,8 +37,8 @@ public class BoardDetailResponse {
             long likeCount,
             long commentCount,
             boolean likedByMe,
+            boolean bookmarkedByMe,
             List<String> images
-
     ) {
         this.postId = postId;
         this.title = title;
@@ -49,6 +50,7 @@ public class BoardDetailResponse {
         this.likeCount = likeCount;
         this.commentCount = commentCount;
         this.likedByMe = likedByMe;
+        this.bookmarkedByMe = bookmarkedByMe;
         this.images = images;
     }
 
@@ -63,6 +65,7 @@ public class BoardDetailResponse {
             long likeCount,
             long commentCount,
             boolean likedByMe,
+            boolean bookmarkedByMe,
             List<String> images
     ) {
         return new BoardDetailResponse(
@@ -76,6 +79,7 @@ public class BoardDetailResponse {
                 likeCount,
                 commentCount,
                 likedByMe,
+                bookmarkedByMe,
                 images
         );
     }
@@ -91,5 +95,6 @@ public class BoardDetailResponse {
     public long getLikeCount() { return likeCount; }
     public long getCommentCount() { return commentCount; }
     public boolean isLikedByMe() { return likedByMe; }
+    public boolean isBookmarkedByMe() { return bookmarkedByMe; }
     public List<String> getImages() { return images; }
 }
