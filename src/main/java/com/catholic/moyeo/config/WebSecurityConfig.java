@@ -2,6 +2,7 @@ package com.catholic.moyeo.config;
 
 import com.catholic.moyeo.security.JwtAuthenticationFilter;
 import com.catholic.moyeo.security.OAuth2SuccessHandler;
+import com.catholic.moyeo.security.OAuth2FailureHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,6 +29,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class WebSecurityConfig {
 
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
@@ -57,6 +59,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/",
+                                "/error",
                                 "/oauth2/**",
                                 "/login/**",
                                 "/oauth/**",
@@ -70,6 +73,7 @@ public class WebSecurityConfig {
                 // OAuth2 로그인 설정
                 .oauth2Login(oauth -> oauth
                         .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler)
                 )
 
                 // JWT 필터 등록
