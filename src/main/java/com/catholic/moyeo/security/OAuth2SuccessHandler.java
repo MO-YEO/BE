@@ -6,8 +6,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -24,14 +22,12 @@ import java.io.IOException;
  * 3. 학교 이메일 도메인 검증
  * 4. 사용자 DB 조회 또는 신규 생성
  * 5. JWT Access Token 발급
- * 6. 토큰을 HttpOnly 쿠키로 내려주고 프론트로 리다이렉트
  */
 @Component
 @RequiredArgsConstructor
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final MemberRepository memberRepository;
-    private final CookieProps cookieProps;
 
     // JWT 토큰 생성기
     private final JwtProvider jwtProvider;
@@ -91,25 +87,19 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String token = jwtProvider.createAccessToken(member.getId(), member.getEmail());
 
         /**
-         * JWT를 HttpOnly 쿠키로 전달
+         * JWT를 프론트엔드 리다이렉트 URL의 파라미터로 전달
          *
-         * - JavaScript에서 접근 불가 (XSS 방어)
-         * - URL에 토큰 노출하지 않음
+         * - 프론트엔드가 자체적으로 토큰을 수집하여 스토리지에 저장하고
+         * - URL에서 즉시 파라미터를 삭제하도록 처리됨
          */
-        ResponseCookie cookie = ResponseCookie.from("access_token", token)
-                .httpOnly(true)
-                .secure(cookieProps.isSecure())
-                .sameSite(cookieProps.getSameSite())
+        String redirectUrl = oauth2Props.getRedirectUrl();
+        if (redirectUrl.contains("?")) {
+            redirectUrl += "&token=" + token;
+        } else {
+            redirectUrl += "?token=" + token;
+        }
 
-                .path("/")
-                .maxAge(jwtProvider.getAccessExpMs() / 1000)
-
-                .build();
-
-        // 응답 헤더에 쿠키 추가
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-
-        // 프론트엔드로 리다이렉트 (토큰은 쿠키로만 전달)
-        response.sendRedirect(oauth2Props.getRedirectUrl());
+        // 프론트엔드로 리다이렉트 (파라미터에 토큰 첨부)
+        response.sendRedirect(redirectUrl);
     }
 }
