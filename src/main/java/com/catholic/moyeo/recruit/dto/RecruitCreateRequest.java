@@ -99,8 +99,13 @@ public class RecruitCreateRequest {
 
     @NotNull
     @Min(1)
+    private Integer applicantCount;
+
+    @NotNull
+    @Min(1)
     private Integer totalHeadcount;
 
+    @NotNull
     private LocalDate deadline;
 
     public RecruitCreateRequest() {}
@@ -112,6 +117,7 @@ public class RecruitCreateRequest {
     public String getTitle() { return title; }
     public String getContent() { return content; }
     public List<String> getSkills() { return skills; }
+    public Integer getApplicantCount() { return applicantCount; }
     public Integer getTotalHeadcount() { return totalHeadcount; }
     public LocalDate getDeadline() { return deadline; }
 
@@ -134,6 +140,7 @@ public class RecruitCreateRequest {
     public void setTitle(String title) { this.title = title; }
     public void setContent(String content) { this.content = content; }
     public void setSkills(List<String> skills) { this.skills = skills; }
+    public void setApplicantCount(Integer applicantCount) { this.applicantCount = applicantCount; }
     public void setTotalHeadcount(Integer totalHeadcount) { this.totalHeadcount = totalHeadcount; }
     public void setDeadline(LocalDate deadline) { this.deadline = deadline; }
 

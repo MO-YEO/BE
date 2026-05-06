@@ -6,11 +6,11 @@ import com.catholic.moyeo.recruit.dto.ApplicationResponse;
 import com.catholic.moyeo.recruit.dto.ApplyStatusResponse;
 import com.catholic.moyeo.recruit.dto.MyAppliedRecruitListResponse;
 import com.catholic.moyeo.recruit.dto.MyAppliedRecruitResponse;
+import com.catholic.moyeo.recruit.dto.RecruitApplyRequest;
 import com.catholic.moyeo.recruit.dto.RecruitCreateRequest;
-import com.catholic.moyeo.recruit.dto.RecruitDetailResponse;
 import com.catholic.moyeo.recruit.dto.RecruitListResponse;
+import com.catholic.moyeo.recruit.dto.RecruitResponse;
 import com.catholic.moyeo.recruit.dto.RecruitStatusUpdateRequest;
-import com.catholic.moyeo.recruit.dto.RecruitSummaryResponse;
 import com.catholic.moyeo.recruit.dto.RecruitUpdateRequest;
 import com.catholic.moyeo.recruit.service.RecruitService;
 import jakarta.validation.Valid;
@@ -193,7 +193,7 @@ public class RecruitController {
         String resolvedActivityCategory = firstNonBlank(activityCategory, type);
         String resolvedRecruitCategory = firstNonBlank(recruitCategory, category);
 
-        Page<RecruitSummaryResponse> page = recruitService.list(
+        Page<RecruitResponse> page = recruitService.list(
                 resolvedActivityCategory,
                 resolvedRecruitCategory,
                 status,
@@ -205,20 +205,7 @@ public class RecruitController {
         return ResponseEntity.ok(RecruitListResponse.from(page));
     }
 
-    /**
-     * 모집글 단건 조회
-     *
-     * Response:
-     * {
-     *   recruit { ... author {...} ... },
-     *   appliedByMe,
-     *   applicantCount
-     * }
-     */
-    @GetMapping("/{recruitId}")
-    public ResponseEntity<RecruitDetailResponse> get(@PathVariable("recruitId") Long recruitId) {
-        return ResponseEntity.ok(recruitService.get(recruitId));
-    }
+
 
     /**
      * 모집글 생성 (로그인 필요)
@@ -237,7 +224,7 @@ public class RecruitController {
      * - 모집글 상세 조회 응답과 동일 shape
      */
     @PostMapping
-    public ResponseEntity<RecruitDetailResponse> create(@RequestBody @Valid RecruitCreateRequest req) {
+    public ResponseEntity<RecruitResponse> create(@RequestBody @Valid RecruitCreateRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(recruitService.create(req));
     }
 
@@ -254,7 +241,7 @@ public class RecruitController {
      *   req.category -> recruitCategory(2차 필터)
      */
     @PatchMapping("/{recruitId}")
-    public ResponseEntity<RecruitDetailResponse> update(
+    public ResponseEntity<RecruitResponse> update(
             @PathVariable("recruitId") Long recruitId,
             @RequestBody @Valid RecruitUpdateRequest req
     ) {
@@ -280,7 +267,7 @@ public class RecruitController {
      * - 모집글 상세 조회 응답과 동일 shape
      */
     @PatchMapping("/{recruitId}/status")
-    public ResponseEntity<RecruitDetailResponse> updateStatus(
+    public ResponseEntity<RecruitResponse> updateStatus(
             @PathVariable("recruitId") Long recruitId,
             @RequestBody @Valid RecruitStatusUpdateRequest req
     ) {
@@ -295,8 +282,11 @@ public class RecruitController {
      * - applicantCount
      */
     @PostMapping("/{recruitId}/apply")
-    public ResponseEntity<ApplyStatusResponse> apply(@PathVariable("recruitId") Long recruitId) {
-        return ResponseEntity.ok(recruitService.apply(recruitId));
+    public ResponseEntity<ApplyStatusResponse> apply(
+            @PathVariable("recruitId") Long recruitId,
+            @RequestBody @Valid RecruitApplyRequest req
+    ) {
+        return ResponseEntity.ok(recruitService.apply(recruitId, req));
     }
 
     /**
@@ -354,7 +344,7 @@ public class RecruitController {
      */
     @GetMapping("/me")
     public ResponseEntity<RecruitListResponse> myPosts(Pageable pageable) {
-        Page<RecruitSummaryResponse> page = recruitService.myPosts(pageable);
+        Page<RecruitResponse> page = recruitService.myPosts(pageable);
         return ResponseEntity.ok(RecruitListResponse.from(page));
     }
 
