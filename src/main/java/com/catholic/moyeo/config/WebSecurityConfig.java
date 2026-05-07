@@ -51,7 +51,8 @@ public class WebSecurityConfig {
                         .accessDeniedHandler((req, res, e) -> res.sendError(HttpStatus.FORBIDDEN.value()))
                 )
 
-
+                //TODO
+                //.anyRequest().authenticated()로 바꿔야함
                 // URL 접근 정책
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
@@ -59,10 +60,12 @@ public class WebSecurityConfig {
                                 "/oauth2/**",
                                 "/login/**",
                                 "/oauth/**",
-                                "/oauth/callback"
+                                "/oauth/callback",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/uploads/**"
                         ).permitAll()
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated()                )
 
                 // OAuth2 로그인 설정
                 .oauth2Login(oauth -> oauth
@@ -91,4 +94,6 @@ public class WebSecurityConfig {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
+
+
 }
