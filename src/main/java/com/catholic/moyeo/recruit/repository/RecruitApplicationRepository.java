@@ -40,9 +40,5 @@ public interface RecruitApplicationRepository extends JpaRepository<RecruitAppli
      */
     Page<RecruitApplication> findByRecruitPostId(Long recruitPostId, Pageable pageable);
 
-    /**
-     * 내가 지원한 모집글 목록 조회용
-     * - userId 기준으로 application row를 조회한다.
-     */
     Page<RecruitApplication> findByUserId(Long userId, Pageable pageable);
 }

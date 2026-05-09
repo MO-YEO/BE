@@ -14,10 +14,10 @@ import java.util.List;
  * }
  */
 public record RecruitListResponse(
-        List<RecruitSummaryResponse> recruits,
+        List<RecruitResponse> recruits,
         PageInfoResponse pageInfo
 ) {
-    public static RecruitListResponse from(Page<RecruitSummaryResponse> page) {
+    public static RecruitListResponse from(Page<RecruitResponse> page) {
         return new RecruitListResponse(
                 page.getContent(),
                 PageInfoResponse.from(page)

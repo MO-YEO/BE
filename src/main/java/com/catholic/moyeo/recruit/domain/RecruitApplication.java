@@ -39,6 +39,27 @@ public class RecruitApplication {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "name", length = 30)
+    private String name;
+
+    @Column(name = "role", length = 100)
+    private String role;
+
+    @Column(name = "introduction", length = 1000)
+    private String introduction;
+
+    @Column(name = "required_skills", length = 500)
+    private String requiredSkills;
+
+    @Column(name = "contact_email", length = 255)
+    private String contactEmail;
+
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
+
+    @Column(name = "github_url", length = 255)
+    private String githubUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private RecruitApplicationStatus status = RecruitApplicationStatus.APPLIED;
@@ -51,9 +72,17 @@ public class RecruitApplication {
 
     protected RecruitApplication() {}
 
-    public RecruitApplication(Long recruitPostId, Long userId) {
+    public RecruitApplication(Long recruitPostId, Long userId, String name, String role, String introduction, 
+                              String requiredSkills, String contactEmail, String phoneNumber, String githubUrl) {
         this.recruitPostId = recruitPostId;
         this.userId = userId;
+        this.name = name;
+        this.role = role;
+        this.introduction = introduction;
+        this.requiredSkills = requiredSkills;
+        this.contactEmail = contactEmail;
+        this.phoneNumber = phoneNumber;
+        this.githubUrl = githubUrl;
         this.status = RecruitApplicationStatus.APPLIED;
     }
 
@@ -73,6 +102,13 @@ public class RecruitApplication {
     public Long getId() { return id; }
     public Long getRecruitPostId() { return recruitPostId; }
     public Long getUserId() { return userId; }
+    public String getName() { return name; }
+    public String getRole() { return role; }
+    public String getIntroduction() { return introduction; }
+    public String getRequiredSkills() { return requiredSkills; }
+    public String getContactEmail() { return contactEmail; }
+    public String getPhoneNumber() { return phoneNumber; }
+    public String getGithubUrl() { return githubUrl; }
     public RecruitApplicationStatus getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
