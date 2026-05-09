@@ -17,6 +17,17 @@ public class MemberController {
 
     private final MemberService memberService;
 
+    //내가 참여한 프로젝트 목록
+    //팀원 등록 api
+    @PostMapping("/me/team-profile")
+    public MyProfileResponse registerTeamProfile(
+            Authentication authentication,
+            @Valid @RequestBody UpdateMyProfileRequest request
+    ) {
+        Long memberId = (Long) authentication.getPrincipal();
+        return memberService.registerTeamProfile(memberId, request);
+    }
+
     // 내 프로필 조회
     @GetMapping("/me")
     public MyProfileResponse getMyProfile(Authentication authentication) {

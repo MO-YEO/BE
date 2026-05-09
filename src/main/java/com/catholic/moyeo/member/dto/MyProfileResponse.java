@@ -26,6 +26,7 @@ public class MyProfileResponse {
     private List<String> techStacks;
     private List<String> activityCategories;
     private String phoneNumber;
+    private boolean teamProfileRegistered;
 
     public static MyProfileResponse from(Member member,
                                          List<String> techStacks,
@@ -43,6 +44,7 @@ public class MyProfileResponse {
                 .techStacks(techStacks)
                 .activityCategories(activityCategories)
                 .phoneNumber(member.getPhoneNumber())
+                .teamProfileRegistered(member.isTeamProfileRegistered())
                 .build();
     }
 

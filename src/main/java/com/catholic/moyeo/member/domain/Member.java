@@ -66,6 +66,16 @@ public class Member {
     @Column(name = "profile_image_url")
     private String profileImageUrl;
 
+    @Column(name = "team_profile_registered", nullable = false)
+    private boolean teamProfileRegistered = false;
+
+    public void registerTeamProfile() {
+        this.teamProfileRegistered = true;
+    }
+
+    public void unregisterTeamProfile() {
+        this.teamProfileRegistered = false;
+    }
 
     protected Member() {}
 

@@ -59,13 +59,16 @@ public class MemberService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
 
+        if (!member.isTeamProfileRegistered()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Team profile not found");
+        }
+
         return MemberDetailResponse.from(
                 member,
                 getTechStacks(member),
                 getActivityCategories(member)
         );
     }
-
     public MemberListResponse getMembers(Long userId, String techStack, String activityCategory, int page, int size) {
 
         Member currentUser = memberRepository.findById(userId)
@@ -81,7 +84,7 @@ public class MemberService {
             ActivityCategory category = ActivityCategory.from(activityCategory);
             memberPage = memberRepository.findByActivityCategory(category, pageRequest);
         } else {
-            memberPage = memberRepository.findAll(pageRequest);
+            memberPage = memberRepository.findByTeamProfileRegisteredTrue(pageRequest);
         }
 
         List<MemberCardResponse> items = memberPage.getContent()
@@ -172,7 +175,6 @@ public class MemberService {
         );
     }
 
-    //북마크 추가
     @Transactional
     public void addBookmark(Long userId, Long targetId) {
 
@@ -186,13 +188,16 @@ public class MemberService {
         Member target = memberRepository.findById(targetId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
+        if (!target.isTeamProfileRegistered()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Team profile not found");
+        }
+
         if (memberBookmarkRepository.existsByUserAndTarget(user, target)) {
             return;
         }
 
         memberBookmarkRepository.save(new MemberBookmark(user, target));
     }
-
     //북마크 삭제
     @Transactional
     public void removeBookmark(Long userId, Long targetId) {
@@ -250,6 +255,63 @@ public class MemberService {
                 null,
                 url,
                 null, null, null, null, null
+        );
+    }
+
+    @Transactional
+    public MyProfileResponse registerTeamProfile(Long memberId, UpdateMyProfileRequest request) {
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
+
+        member.updateProfile(
+                request.getNickname(),
+                request.getProfileImageUrl(),
+                request.getRole(),
+                request.getIntro(),
+                request.getGithubUrl(),
+                request.getContactEmail(),
+                request.getPhoneNumber()
+        );
+
+        memberTechStackRepository.deleteByMember(member);
+
+        if (request.getTechStacks() != null) {
+            for (String name : request.getTechStacks()) {
+                if (name == null || name.isBlank()) continue;
+
+                String normalized = name.trim().toLowerCase();
+
+                TechStack techStack = techStackRepository
+                        .findByName(normalized)
+                        .orElseGet(() -> techStackRepository.save(new TechStack(normalized)));
+
+                memberTechStackRepository.save(
+                        new MemberTechStack(member, techStack)
+                );
+            }
+        }
+
+        memberActivityCategoryRepository.deleteByMember(member);
+
+        if (request.getActivityCategories() != null) {
+            for (String value : request.getActivityCategories()) {
+                if (value == null || value.isBlank()) continue;
+
+                ActivityCategory category = ActivityCategory.from(value);
+
+                memberActivityCategoryRepository.save(
+                        new MemberActivityCategory(member, category)
+                );
+            }
+        }
+
+        member.registerTeamProfile();
+
+        return MyProfileResponse.from(
+                member,
+                getTechStacks(member),
+                getActivityCategories(member)
         );
     }
 }
