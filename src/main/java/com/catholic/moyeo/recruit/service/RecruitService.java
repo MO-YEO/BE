@@ -12,9 +12,9 @@ import com.catholic.moyeo.recruit.dto.ApplyStatusResponse;
 import com.catholic.moyeo.recruit.dto.MyAppliedRecruitResponse;
 import com.catholic.moyeo.recruit.dto.RecruitAuthorResponse;
 import com.catholic.moyeo.recruit.dto.RecruitCreateRequest;
-import com.catholic.moyeo.recruit.dto.RecruitDetailResponse;
+import com.catholic.moyeo.recruit.dto.RecruitApplyRequest;
+import com.catholic.moyeo.recruit.dto.RecruitResponse;
 import com.catholic.moyeo.recruit.dto.RecruitStatusUpdateRequest;
-import com.catholic.moyeo.recruit.dto.RecruitSummaryResponse;
 import com.catholic.moyeo.recruit.dto.RecruitUpdateRequest;
 import com.catholic.moyeo.recruit.repository.RecruitApplicationRepository;
 import com.catholic.moyeo.recruit.repository.RecruitPostRepository;
@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -38,6 +39,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.catholic.moyeo.review.domain.MemberReview;
+import com.catholic.moyeo.review.repository.ReviewRepository;
+import lombok.RequiredArgsConstructor;
 
 @Service
 public class RecruitService {
@@ -108,15 +112,18 @@ public class RecruitService {
     private final RecruitPostRepository postRepo;
     private final RecruitApplicationRepository appRepo;
     private final RecruitMemberReader memberReader;
+    private final ReviewRepository reviewRepo;
 
     public RecruitService(
             RecruitPostRepository postRepo,
             RecruitApplicationRepository appRepo,
-            RecruitMemberReader memberReader
+            RecruitMemberReader memberReader,
+            ReviewRepository reviewRepo
     ) {
         this.postRepo = postRepo;
         this.appRepo = appRepo;
         this.memberReader = memberReader;
+        this.reviewRepo = reviewRepo;
     }
 
     // =========================
@@ -140,7 +147,7 @@ public class RecruitService {
      *   req.department -> department
      */
     @Transactional
-    public RecruitDetailResponse create(RecruitCreateRequest req) {
+    public RecruitResponse create(RecruitCreateRequest req) {
         Long me = AuthUtil.currentMemberId();
 
         String normalizedActivityCategory = normalizeActivityCategoryOrThrow(req.getType());
@@ -161,17 +168,18 @@ public class RecruitService {
                 req.getTitle(),
                 req.getContent(),
                 csvSkills,
+                req.getApplicantCount().shortValue(),
                 req.getTotalHeadcount().shortValue(),
                 req.getDeadline()
         );
 
         RecruitPost saved = postRepo.save(post);
 
-        return RecruitDetailResponse.from(
+        return RecruitResponse.from(
                 saved,
-                getAuthor(saved.getAuthorUserId()),
                 splitSkillCsv(saved.getRequiredSkills()),
-                false
+                false,
+                getAuthor(saved.getAuthorUserId())
         );
     }
 
@@ -193,7 +201,7 @@ public class RecruitService {
      * - department는 필터에 사용하지 않고, 응답 표시값으로만 내려준다.
      */
     @Transactional(readOnly = true)
-    public Page<RecruitSummaryResponse> list(
+    public Page<RecruitResponse> list(
             String activityCategory,
             String recruitCategory,
             String status,
@@ -245,7 +253,7 @@ public class RecruitService {
 
         return page.map(post -> {
             boolean appliedByMe = appRepo.existsByRecruitPostIdAndUserId(post.getId(), me);
-            return RecruitSummaryResponse.from(
+            return RecruitResponse.from(
                     post,
                     splitSkillCsv(post.getRequiredSkills()),
                     appliedByMe,
@@ -254,29 +262,7 @@ public class RecruitService {
         });
     }
 
-    /**
-     * 모집글 단건 상세 조회
-     *
-     * 주의:
-     * - author는 항상 조합해서 내려준다.
-     * - appliedByMe는 현재 사용자 기준으로 계산한다.
-     * - department는 표시용 값이므로 post에서 그대로 내려준다.
-     */
-    @Transactional(readOnly = true)
-    public RecruitDetailResponse get(Long recruitId) {
-        RecruitPost post = postRepo.findById(recruitId)
-                .orElseThrow(() -> new IllegalArgumentException("Recruit not found: " + recruitId));
 
-        Long me = AuthUtil.currentMemberId();
-        boolean appliedByMe = appRepo.existsByRecruitPostIdAndUserId(recruitId, me);
-
-        return RecruitDetailResponse.from(
-                post,
-                getAuthor(post.getAuthorUserId()),
-                splitSkillCsv(post.getRequiredSkills()),
-                appliedByMe
-        );
-    }
 
     // =========================
     // Update / Delete / Status
@@ -299,7 +285,7 @@ public class RecruitService {
      *   req.department -> department
      */
     @Transactional
-    public RecruitDetailResponse update(Long recruitId, RecruitUpdateRequest req) {
+    public RecruitResponse update(Long recruitId, RecruitUpdateRequest req) {
         Long me = AuthUtil.currentMemberId();
 
         RecruitPost post = postRepo.findById(recruitId)
@@ -344,11 +330,11 @@ public class RecruitService {
 
         boolean appliedByMe = appRepo.existsByRecruitPostIdAndUserId(recruitId, me);
 
-        return RecruitDetailResponse.from(
+        return RecruitResponse.from(
                 post,
-                getAuthor(post.getAuthorUserId()),
                 splitSkillCsv(post.getRequiredSkills()),
-                appliedByMe
+                appliedByMe,
+                getAuthor(post.getAuthorUserId())
         );
     }
 
@@ -379,7 +365,7 @@ public class RecruitService {
      * - 상태만 바꾸며 나머지 필드는 유지한다.
      */
     @Transactional
-    public RecruitDetailResponse updateStatus(Long recruitId, RecruitStatusUpdateRequest req) {
+    public RecruitResponse updateStatus(Long recruitId, RecruitStatusUpdateRequest req) {
         Long me = AuthUtil.currentMemberId();
 
         RecruitPost post = postRepo.findById(recruitId)
@@ -392,11 +378,11 @@ public class RecruitService {
 
         boolean appliedByMe = appRepo.existsByRecruitPostIdAndUserId(recruitId, me);
 
-        return RecruitDetailResponse.from(
+        return RecruitResponse.from(
                 post,
-                getAuthor(post.getAuthorUserId()),
                 splitSkillCsv(post.getRequiredSkills()),
-                appliedByMe
+                appliedByMe,
+                getAuthor(post.getAuthorUserId())
         );
     }
 
@@ -414,7 +400,7 @@ public class RecruitService {
      * - 지원 row 생성만 수행하며 applicantCount는 증가하지 않는다.
      */
     @Transactional
-    public ApplyStatusResponse apply(Long recruitId) {
+    public ApplyStatusResponse apply(Long recruitId, RecruitApplyRequest req) {
         Long me = AuthUtil.currentMemberId();
 
         RecruitPost post = postRepo.findById(recruitId)
@@ -431,7 +417,18 @@ public class RecruitService {
         }
 
         try {
-            appRepo.save(new RecruitApplication(recruitId, me));
+            RecruitApplication application = new RecruitApplication(
+                    recruitId,
+                    me,
+                    req.getName(),
+                    req.getRole(),
+                    req.getIntroduction(),
+                    req.getRequiredSkills(),
+                    req.getContactEmail(),
+                    req.getPhoneNumber(),
+                    req.getGithubUrl()
+            );
+            appRepo.save(application);
         } catch (DataIntegrityViolationException ignored) {
             // unique 충돌도 멱등으로 흡수
         }
@@ -576,11 +573,11 @@ public class RecruitService {
      * - 필요 시 프론트에서 별도 의미를 부여하지 않도록 맞춰둔 값이다.
      */
     @Transactional(readOnly = true)
-    public Page<RecruitSummaryResponse> myPosts(Pageable pageable) {
+    public Page<RecruitResponse> myPosts(Pageable pageable) {
         Long me = AuthUtil.currentMemberId();
 
         return postRepo.findByAuthorUserId(me, pageable)
-                .map(post -> RecruitSummaryResponse.from(
+                .map(post -> RecruitResponse.from(
                         post,
                         splitSkillCsv(post.getRequiredSkills()),
                         false,
@@ -875,13 +872,42 @@ public class RecruitService {
             RecruitApplication app,
             ApplicationResponse.Applicant applicant
     ) {
+        // 리뷰 데이터 조회 (모집자 전용 정책 준수)
+        List<MemberReview> allReviews = reviewRepo.findByTargetUserIdOrderByCreatedAtDesc(app.getUserId());
+        
+        Double avgRating = allReviews.isEmpty() ? 0.0 : 
+                allReviews.stream().mapToInt(MemberReview::getRating).average().orElse(0.0);
+        
+        int reviewCount = allReviews.size();
+        
+        // 최근 리뷰 2개 추출
+        List<ApplicationResponse.ReviewSummary> recentReviews = allReviews.stream()
+                .limit(2)
+                .map(r -> new ApplicationResponse.ReviewSummary(
+                        r.getId(),
+                        r.getRating(),
+                        r.getContent(),
+                        r.getCreatedAt()
+                ))
+                .collect(Collectors.toList());
+
         return ApplicationResponse.of(
                 app.getId(),
                 applicant.getMemberId(),
                 applicant.getNickname(),
                 applicant.getContactEmail(),
+                app.getName(),
+                app.getRole(),
+                app.getIntroduction(),
+                splitSkillCsv(app.getRequiredSkills()),
+                app.getContactEmail(),
+                app.getPhoneNumber(),
+                app.getGithubUrl(),
                 app.getStatus(),
-                app.getCreatedAt()
+                app.getCreatedAt(),
+                avgRating,
+                reviewCount,
+                recentReviews
         );
     }
 

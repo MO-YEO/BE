@@ -132,6 +132,7 @@ public class RecruitPost {
                        String title,
                        String content,
                        String requiredSkills,
+                       short applicantCount,
                        short totalHeadcount,
                        LocalDate deadline) {
         this.authorUserId = authorUserId;
@@ -142,11 +143,11 @@ public class RecruitPost {
         this.title = title;
         this.content = content;
         this.requiredSkills = requiredSkills;
+        this.applicantCount = (short) (applicantCount + 1); // 정책: 항상 작성자(+1) 포함
         this.totalHeadcount = totalHeadcount;
         this.deadline = deadline;
 
         this.status = RecruitPostStatus.OPEN;
-        this.applicantCount = 1; // 정책: 작성자 포함 참여 인원
     }
 
     @PrePersist

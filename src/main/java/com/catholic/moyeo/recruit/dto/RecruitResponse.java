@@ -8,16 +8,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 모집글 목록 아이템 응답 DTO
+ * 모집글 응답 DTO (표준)
  *
  * API 기준:
- * recruits[] {
+ * {
  *   recruitId,
  *   type,
  *   category,
  *   tag,
  *   department,
  *   title,
+ *   content,
  *   status,
  *   skills,
  *   appliedByMe,
@@ -25,6 +26,7 @@ import java.util.List;
  *   totalHeadcount,
  *   deadline,
  *   createdAt,
+ *   updatedAt,
  *   author {
  *     memberId,
  *     nickname,
@@ -39,14 +41,8 @@ import java.util.List;
  * 레거시/호환 정책:
  * - 기존 응답 스키마와 프론트 호환을 위해 type/category 필드는 유지한다.
  * - 추가로 activityCategory/recruitCategory alias getter를 제공한다.
- *
- * NOTE:
- * - applicantCount는 "작성자 포함 현재 참여 인원"이다.
- * - author 정보는 Member 조회 결과를 서비스에서 조합해서 내려준다.
- * - department는 모집글 작성 시 사용자가 선택적으로 입력한 표시용 문자열이다.
- * - department는 분류/검색/필터 용도로 사용하지 않는다.
  */
-public class RecruitSummaryResponse {
+public class RecruitResponse {
 
     private Long recruitId;
 
@@ -65,6 +61,7 @@ public class RecruitSummaryResponse {
     private String tag;
     private String department;
     private String title;
+    private String content;
     private RecruitPostStatus status;
     private List<String> skills;
     private boolean appliedByMe;
@@ -72,21 +69,23 @@ public class RecruitSummaryResponse {
     private Integer totalHeadcount;
     private LocalDate deadline;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private RecruitAuthorResponse author;
 
-    public static RecruitSummaryResponse from(
+    public static RecruitResponse from(
             RecruitPost post,
             List<String> skills,
             boolean appliedByMe,
             RecruitAuthorResponse author
     ) {
-        RecruitSummaryResponse response = new RecruitSummaryResponse();
+        RecruitResponse response = new RecruitResponse();
         response.recruitId = post.getId();
         response.type = post.getType();
         response.category = post.getCategory();
         response.tag = post.getTag();
         response.department = post.getDepartment();
         response.title = post.getTitle();
+        response.content = post.getContent();
         response.status = post.getStatus();
         response.skills = skills;
         response.appliedByMe = appliedByMe;
@@ -94,6 +93,7 @@ public class RecruitSummaryResponse {
         response.totalHeadcount = (int) post.getTotalHeadcount();
         response.deadline = post.getDeadline();
         response.createdAt = post.getCreatedAt();
+        response.updatedAt = post.getUpdatedAt();
         response.author = author;
         return response;
     }
@@ -104,6 +104,7 @@ public class RecruitSummaryResponse {
     public String getTag() { return tag; }
     public String getDepartment() { return department; }
     public String getTitle() { return title; }
+    public String getContent() { return content; }
     public RecruitPostStatus getStatus() { return status; }
     public List<String> getSkills() { return skills; }
     public boolean isAppliedByMe() { return appliedByMe; }
@@ -111,6 +112,7 @@ public class RecruitSummaryResponse {
     public Integer getTotalHeadcount() { return totalHeadcount; }
     public LocalDate getDeadline() { return deadline; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
     public RecruitAuthorResponse getAuthor() { return author; }
 
     /**
