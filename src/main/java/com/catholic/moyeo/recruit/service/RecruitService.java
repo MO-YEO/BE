@@ -880,9 +880,8 @@ public class RecruitService {
         
         int reviewCount = allReviews.size();
         
-        // 최근 리뷰 2개 추출
+        // 리뷰 전체 추출
         List<ApplicationResponse.ReviewSummary> recentReviews = allReviews.stream()
-                .limit(2)
                 .map(r -> new ApplicationResponse.ReviewSummary(
                         r.getId(),
                         r.getRating(),
