@@ -23,4 +23,11 @@ public record RecruitListResponse(
                 PageInfoResponse.from(page)
         );
     }
+
+    public static RecruitListResponse from(List<RecruitResponse> recruits, Page<?> page) {
+        return new RecruitListResponse(
+                recruits,
+                PageInfoResponse.from(page)
+        );
+    }
 }

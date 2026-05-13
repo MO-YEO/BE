@@ -65,7 +65,9 @@ public class RecruitResponse {
     private RecruitPostStatus status;
     private List<String> skills;
     private boolean appliedByMe;
+    private boolean bookmarkedByMe;
     private long applicantCount;
+    private long approvedCount;
     private Integer totalHeadcount;
     private LocalDate deadline;
     private LocalDateTime createdAt;
@@ -76,6 +78,8 @@ public class RecruitResponse {
             RecruitPost post,
             List<String> skills,
             boolean appliedByMe,
+            boolean bookmarkedByMe,
+            long applicantCount,
             RecruitAuthorResponse author
     ) {
         RecruitResponse response = new RecruitResponse();
@@ -89,7 +93,9 @@ public class RecruitResponse {
         response.status = post.getStatus();
         response.skills = skills;
         response.appliedByMe = appliedByMe;
-        response.applicantCount = post.getApplicantCount();
+        response.bookmarkedByMe = bookmarkedByMe;
+        response.applicantCount = applicantCount;
+        response.approvedCount = post.getApplicantCount(); // 현재 참여 확정 인원 (작성자 포함)
         response.totalHeadcount = (int) post.getTotalHeadcount();
         response.deadline = post.getDeadline();
         response.createdAt = post.getCreatedAt();
@@ -108,7 +114,9 @@ public class RecruitResponse {
     public RecruitPostStatus getStatus() { return status; }
     public List<String> getSkills() { return skills; }
     public boolean isAppliedByMe() { return appliedByMe; }
+    public boolean isBookmarkedByMe() { return bookmarkedByMe; }
     public long getApplicantCount() { return applicantCount; }
+    public long getApprovedCount() { return approvedCount; }
     public Integer getTotalHeadcount() { return totalHeadcount; }
     public LocalDate getDeadline() { return deadline; }
     public LocalDateTime getCreatedAt() { return createdAt; }

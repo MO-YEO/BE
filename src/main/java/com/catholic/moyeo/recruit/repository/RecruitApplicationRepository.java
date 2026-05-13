@@ -4,7 +4,10 @@ import com.catholic.moyeo.recruit.domain.RecruitApplication;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -41,4 +44,26 @@ public interface RecruitApplicationRepository extends JpaRepository<RecruitAppli
     Page<RecruitApplication> findByRecruitPostId(Long recruitPostId, Pageable pageable);
 
     Page<RecruitApplication> findByUserId(Long userId, Pageable pageable);
+
+    /**
+     * 특정 모집글의 총 지원자 수 조회
+     */
+    long countByRecruitPostId(Long recruitPostId);
+
+    /**
+     * 특정 모집글의 특정 상태인 지원 목록 조회 (예: ACCEPTED 팀원 목록)
+     */
+    List<RecruitApplication> findByRecruitPostIdAndStatus(Long recruitPostId, com.catholic.moyeo.recruit.domain.RecruitApplicationStatus status);
+
+    /**
+     * 특정 사용자가 지원한 모집글 ID 목록 조회 (배치 처리용)
+     */
+    @Query("SELECT a.recruitPostId FROM RecruitApplication a WHERE a.userId = :userId AND a.recruitPostId IN :recruitPostIds")
+    List<Long> findAppliedPostIdsByUserIdAndRecruitPostIds(@Param("userId") Long userId, @Param("recruitPostIds") List<Long> recruitPostIds);
+
+    /**
+     * 여러 모집글의 지원자 수를 한 번에 조회 (배치 처리용)
+     */
+    @Query("SELECT a.recruitPostId, COUNT(a) FROM RecruitApplication a WHERE a.recruitPostId IN :recruitPostIds GROUP BY a.recruitPostId")
+    List<Object[]> countGroupByRecruitPostIds(@Param("recruitPostIds") List<Long> recruitPostIds);
 }
