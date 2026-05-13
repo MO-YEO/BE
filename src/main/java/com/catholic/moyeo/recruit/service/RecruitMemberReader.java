@@ -36,4 +36,9 @@ public interface RecruitMemberReader {
      * @return applicant 응답 DTO
      */
     ApplicationResponse.Applicant getApplicant(Long memberId);
+
+    /**
+     * 여러 작성자 정보를 한 번에 조회한다. (N+1 방지)
+     */
+    java.util.Map<Long, RecruitAuthorResponse> getAuthors(java.util.Collection<Long> memberIds);
 }
