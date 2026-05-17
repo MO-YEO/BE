@@ -26,10 +26,19 @@ public class MyAppliedRecruitResponse {
 
     private RecruitApplicationStatus applicationStatus;
 
+    private long applicantCount;
+    private long approvedCount;
+    private Integer totalHeadcount;
+
     private LocalDate deadline;
     private LocalDateTime createdAt;
 
-    public static MyAppliedRecruitResponse from(RecruitPost p, List<String> skills, RecruitApplicationStatus applicationStatus) {
+    public static MyAppliedRecruitResponse from(
+            RecruitPost p, 
+            List<String> skills, 
+            RecruitApplicationStatus applicationStatus,
+            long applicantCount
+    ) {
         MyAppliedRecruitResponse r = new MyAppliedRecruitResponse();
         r.recruitId = p.getId();
         r.type = p.getType();
@@ -37,6 +46,9 @@ public class MyAppliedRecruitResponse {
         r.status = p.getStatus();
         r.skills = skills;
         r.applicationStatus = applicationStatus;
+        r.applicantCount = applicantCount;
+        r.approvedCount = p.getApplicantCount(); // 현재 참여 확정 인원 (작성자 포함)
+        r.totalHeadcount = (int) p.getTotalHeadcount();
         r.deadline = p.getDeadline();
         r.createdAt = p.getCreatedAt();
         return r;
@@ -48,6 +60,9 @@ public class MyAppliedRecruitResponse {
     public RecruitPostStatus getStatus() { return status; }
     public List<String> getSkills() { return skills; }
     public RecruitApplicationStatus getApplicationStatus() { return applicationStatus; }
+    public long getApplicantCount() { return applicantCount; }
+    public long getApprovedCount() { return approvedCount; }
+    public Integer getTotalHeadcount() { return totalHeadcount; }
     public LocalDate getDeadline() { return deadline; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

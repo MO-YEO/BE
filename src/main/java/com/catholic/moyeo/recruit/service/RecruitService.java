@@ -13,6 +13,7 @@ import com.catholic.moyeo.recruit.dto.MyAppliedRecruitResponse;
 import com.catholic.moyeo.recruit.dto.RecruitAuthorResponse;
 import com.catholic.moyeo.recruit.dto.RecruitCreateRequest;
 import com.catholic.moyeo.recruit.dto.RecruitApplyRequest;
+import com.catholic.moyeo.recruit.dto.ParticipatingRecruitResponse;
 import com.catholic.moyeo.recruit.dto.RecruitResponse;
 import com.catholic.moyeo.recruit.dto.RecruitStatusUpdateRequest;
 import com.catholic.moyeo.recruit.dto.RecruitUpdateRequest;
@@ -30,18 +31,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
+import com.catholic.moyeo.recruit.domain.RecruitPostBookmark;
+import com.catholic.moyeo.recruit.dto.RecruitListResponse;
+import com.catholic.moyeo.recruit.repository.RecruitPostBookmarkRepository;
 import com.catholic.moyeo.review.domain.MemberReview;
 import com.catholic.moyeo.review.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
+
 
 @Service
 public class RecruitService {
@@ -53,11 +51,11 @@ public class RecruitService {
      *
      * [카운트 정의]
      * - applicantCount == recruit_post.applicant_count
-     *   = 작성자 포함 현재 참여 인원
-     *   = 1(작성자) + ACCEPTED 인원 수
+     * = 작성자 포함 현재 참여 인원
+     * = 1(작성자) + ACCEPTED 인원 수
      *
      * - recruit_application row 수와는 다르다.
-     *   apply(지원)만으로 applicantCount는 증가하지 않는다.
+     * apply(지원)만으로 applicantCount는 증가하지 않는다.
      *
      * [행위 가능 조건]
      * - OPEN 이고 deadline 미경과인 경우에만 apply/cancel/decide 가능
@@ -82,22 +80,22 @@ public class RecruitService {
      * [Member 정보 조회]
      * - 목록/상세 응답에는 author { memberId, nickname, departmentName }가 포함된다.
      * - 지원자 목록/승인·거절 응답에는
-     *   applicant { memberId, nickname, contactEmail }가 포함된다.
+     * applicant { memberId, nickname, contactEmail }가 포함된다.
      * - Recruit 모듈은 memberId(userId)만 보관하므로,
-     *   RecruitMemberReader를 통해 Member 정보를 조회해서 조합한다.
+     * RecruitMemberReader를 통해 Member 정보를 조회해서 조합한다.
      *
      * [카테고리 2단계 정책]
      * - activityCategory: 1차 필터 (ActivityCategory)
      * - recruitCategory: 2차 필터 (RecruitCategory)
      *
      * - 현재 DTO 필드명은 기존 호환을 위해 유지한다.
-     *   create/update 요청에서는
-     *   req.type     -> activityCategory
-     *   req.category -> recruitCategory
+     * create/update 요청에서는
+     * req.type -> activityCategory
+     * req.category -> recruitCategory
      *
      * - 현재 DB 컬럼명도 기존 호환을 위해 유지한다.
-     *   type 컬럼     -> activityCategory 저장
-     *   category 컬럼 -> recruitCategory 저장
+     * type 컬럼 -> activityCategory 저장
+     * category 컬럼 -> recruitCategory 저장
      *
      * [표시용 선택값]
      * - department는 사용자가 원할 때만 입력하는 표시용 문자열이다.
@@ -111,17 +109,19 @@ public class RecruitService {
 
     private final RecruitPostRepository postRepo;
     private final RecruitApplicationRepository appRepo;
+    private final RecruitPostBookmarkRepository bookmarkRepo;
     private final RecruitMemberReader memberReader;
     private final ReviewRepository reviewRepo;
 
     public RecruitService(
             RecruitPostRepository postRepo,
             RecruitApplicationRepository appRepo,
+            RecruitPostBookmarkRepository bookmarkRepo,
             RecruitMemberReader memberReader,
-            ReviewRepository reviewRepo
-    ) {
+            ReviewRepository reviewRepo) {
         this.postRepo = postRepo;
         this.appRepo = appRepo;
+        this.bookmarkRepo = bookmarkRepo;
         this.memberReader = memberReader;
         this.reviewRepo = reviewRepo;
     }
@@ -142,9 +142,9 @@ public class RecruitService {
      *
      * 주의:
      * - 현재 DTO 필드명은 기존 호환을 위해 유지한다.
-     *   req.type       -> activityCategory
-     *   req.category   -> recruitCategory
-     *   req.department -> department
+     * req.type -> activityCategory
+     * req.category -> recruitCategory
+     * req.department -> department
      */
     @Transactional
     public RecruitResponse create(RecruitCreateRequest req) {
@@ -170,8 +170,7 @@ public class RecruitService {
                 csvSkills,
                 req.getApplicantCount().shortValue(),
                 req.getTotalHeadcount().shortValue(),
-                req.getDeadline()
-        );
+                req.getDeadline());
 
         RecruitPost saved = postRepo.save(post);
 
@@ -179,8 +178,9 @@ public class RecruitService {
                 saved,
                 splitSkillCsv(saved.getRequiredSkills()),
                 false,
-                getAuthor(saved.getAuthorUserId())
-        );
+                false,
+                0L,
+                getAuthor(saved.getAuthorUserId()));
     }
 
     // =========================
@@ -201,14 +201,13 @@ public class RecruitService {
      * - department는 필터에 사용하지 않고, 응답 표시값으로만 내려준다.
      */
     @Transactional(readOnly = true)
-    public Page<RecruitResponse> list(
+    public RecruitListResponse list(
             String activityCategory,
             String recruitCategory,
             String status,
             String keyword,
             String skillsCsv,
-            Pageable pageable
-    ) {
+            Pageable pageable) {
         String normalizedActivityCategory = hasText(activityCategory)
                 ? normalizeActivityCategoryOrThrow(activityCategory)
                 : null;
@@ -234,8 +233,7 @@ public class RecruitService {
                 String like = "%" + keyword.trim() + "%";
                 predicates.add(cb.or(
                         cb.like(root.get("title"), like),
-                        cb.like(root.get("content"), like)
-                ));
+                        cb.like(root.get("content"), like)));
             }
             if (skills != null && !skills.isEmpty()) {
                 List<Predicate> orLikes = new ArrayList<>();
@@ -251,18 +249,9 @@ public class RecruitService {
         Page<RecruitPost> page = postRepo.findAll(spec, pageable);
         Long me = AuthUtil.currentMemberId();
 
-        return page.map(post -> {
-            boolean appliedByMe = appRepo.existsByRecruitPostIdAndUserId(post.getId(), me);
-            return RecruitResponse.from(
-                    post,
-                    splitSkillCsv(post.getRequiredSkills()),
-                    appliedByMe,
-                    getAuthor(post.getAuthorUserId())
-            );
-        });
+        List<RecruitResponse> responses = toResponseList(page.getContent(), me);
+        return RecruitListResponse.from(responses, page);
     }
-
-
 
     // =========================
     // Update / Delete / Status
@@ -280,9 +269,9 @@ public class RecruitService {
      *
      * 주의:
      * - 현재 DTO 필드명은 기존 호환을 위해 유지한다.
-     *   req.type       -> activityCategory
-     *   req.category   -> recruitCategory
-     *   req.department -> department
+     * req.type -> activityCategory
+     * req.category -> recruitCategory
+     * req.department -> department
      */
     @Transactional
     public RecruitResponse update(Long recruitId, RecruitUpdateRequest req) {
@@ -329,13 +318,16 @@ public class RecruitService {
         }
 
         boolean appliedByMe = appRepo.existsByRecruitPostIdAndUserId(recruitId, me);
+        boolean bookmarkedByMe = bookmarkRepo.existsByRecruitPostIdAndUserId(recruitId, me);
+        long totalApplicants = appRepo.countByRecruitPostId(recruitId);
 
         return RecruitResponse.from(
                 post,
                 splitSkillCsv(post.getRequiredSkills()),
                 appliedByMe,
-                getAuthor(post.getAuthorUserId())
-        );
+                bookmarkedByMe,
+                totalApplicants,
+                getAuthor(post.getAuthorUserId()));
     }
 
     /**
@@ -377,13 +369,16 @@ public class RecruitService {
         post.setStatus(next);
 
         boolean appliedByMe = appRepo.existsByRecruitPostIdAndUserId(recruitId, me);
+        boolean bookmarkedByMe = bookmarkRepo.existsByRecruitPostIdAndUserId(recruitId, me);
+        long totalApplicants = appRepo.countByRecruitPostId(recruitId);
 
         return RecruitResponse.from(
                 post,
                 splitSkillCsv(post.getRequiredSkills()),
                 appliedByMe,
-                getAuthor(post.getAuthorUserId())
-        );
+                bookmarkedByMe,
+                totalApplicants,
+                getAuthor(post.getAuthorUserId()));
     }
 
     // =========================
@@ -426,8 +421,7 @@ public class RecruitService {
                     req.getRequiredSkills(),
                     req.getContactEmail(),
                     req.getPhoneNumber(),
-                    req.getGithubUrl()
-            );
+                    req.getGithubUrl());
             appRepo.save(application);
         } catch (DataIntegrityViolationException ignored) {
             // unique 충돌도 멱등으로 흡수
@@ -573,16 +567,11 @@ public class RecruitService {
      * - 필요 시 프론트에서 별도 의미를 부여하지 않도록 맞춰둔 값이다.
      */
     @Transactional(readOnly = true)
-    public Page<RecruitResponse> myPosts(Pageable pageable) {
+    public RecruitListResponse myPosts(Pageable pageable) {
         Long me = AuthUtil.currentMemberId();
-
-        return postRepo.findByAuthorUserId(me, pageable)
-                .map(post -> RecruitResponse.from(
-                        post,
-                        splitSkillCsv(post.getRequiredSkills()),
-                        false,
-                        getAuthor(post.getAuthorUserId())
-                ));
+        Page<RecruitPost> page = postRepo.findByAuthorUserId(me, pageable);
+        List<RecruitResponse> responses = toResponseList(page.getContent(), me);
+        return RecruitListResponse.from(responses, page);
     }
 
     /**
@@ -597,28 +586,89 @@ public class RecruitService {
         Long me = AuthUtil.currentMemberId();
 
         Page<RecruitApplication> apps = appRepo.findByUserId(me, pageable);
+        if (apps.isEmpty())
+            return Page.empty(pageable);
 
-        Set<Long> postIds = apps.getContent().stream()
+        List<Long> postIds = apps.getContent().stream()
                 .map(RecruitApplication::getRecruitPostId)
-                .collect(Collectors.toSet());
+                .toList();
 
-        Map<Long, RecruitPost> postMap = postIds.isEmpty()
-                ? Collections.emptyMap()
-                : postRepo.findAllById(postIds).stream()
+        Map<Long, RecruitPost> postMap = postRepo.findAllById(postIds).stream()
                 .collect(Collectors.toMap(RecruitPost::getId, post -> post));
+
+        Map<Long, Long> countMap = toCountMap(appRepo.countGroupByRecruitPostIds(postIds));
 
         return apps.map(app -> {
             RecruitPost post = postMap.get(app.getRecruitPostId());
-            if (post == null) {
+            if (post == null)
                 throw new IllegalStateException("Recruit post missing");
-            }
+
+            long totalApplicants = countMap.getOrDefault(post.getId(), 0L);
 
             return MyAppliedRecruitResponse.from(
                     post,
                     splitSkillCsv(post.getRequiredSkills()),
-                    app.getStatus()
-            );
+                    app.getStatus(),
+                    totalApplicants);
         });
+    }
+
+    /**
+     * 내가 북마크한 모집글 목록 조회
+     */
+    @Transactional(readOnly = true)
+    public RecruitListResponse listBookmarkedRecruits(Pageable pageable) {
+        Long me = AuthUtil.currentMemberId();
+        Page<RecruitPost> page = postRepo.findBookmarkedPostsByUserId(me, pageable);
+        List<RecruitResponse> responses = toResponseList(page.getContent(), me);
+        return RecruitListResponse.from(responses, page);
+    }
+
+    /**
+     * 참여 중인 프로젝트 목록 조회 (마감된 프로젝트 중 내가 작성했거나 승인된 글)
+     */
+    @Transactional(readOnly = true)
+    public Page<ParticipatingRecruitResponse> getParticipatingRecruits(Pageable pageable) {
+        Long me = AuthUtil.currentMemberId();
+
+        Page<RecruitPost> page = postRepo.findParticipating(me, pageable);
+
+        return page.map(post -> {
+            // 참여 팀원 ID 목록 추출 (작성자 + 승인된 인원)
+            List<Long> participantIds = new ArrayList<>();
+            participantIds.add(post.getAuthorUserId());
+
+            List<RecruitApplication> acceptedApps = appRepo.findByRecruitPostIdAndStatus(
+                    post.getId(),
+                    RecruitApplicationStatus.ACCEPTED);
+            acceptedApps.forEach(app -> participantIds.add(app.getUserId()));
+
+            return ParticipatingRecruitResponse.from(
+                    post,
+                    splitSkillCsv(post.getRequiredSkills()),
+                    participantIds);
+        });
+    }
+
+    /**
+     * 모집글 북마크 토글
+     */
+    @Transactional
+    public boolean toggleBookmark(Long recruitId) {
+        Long me = AuthUtil.currentMemberId();
+
+        if (!postRepo.existsById(recruitId)) {
+            throw new IllegalArgumentException("Recruit not found: " + recruitId);
+        }
+
+        Optional<RecruitPostBookmark> existing = bookmarkRepo.findByRecruitPostIdAndUserId(recruitId, me);
+        if (existing.isPresent()) {
+            bookmarkRepo.delete(existing.get());
+            return false;
+        } else {
+            bookmarkRepo.save(new RecruitPostBookmark(recruitId, me));
+            return true;
+        }
     }
 
     // =========================
@@ -847,7 +897,7 @@ public class RecruitService {
      * 정책:
      * - 목록/상세 응답의 author 필드는 여기서 통일해 채운다.
      * - 현재 포함 필드:
-     *   memberId, nickname, departmentName
+     * memberId, nickname, departmentName
      */
     private RecruitAuthorResponse getAuthor(Long memberId) {
         return memberReader.getAuthor(memberId);
@@ -859,7 +909,7 @@ public class RecruitService {
      * 정책:
      * - 지원자 목록/승인·거절 응답의 applicant 필드는 여기서 통일해 채운다.
      * - 현재 포함 필드:
-     *   memberId, nickname, contactEmail
+     * memberId, nickname, contactEmail
      */
     private ApplicationResponse.Applicant getApplicant(Long memberId) {
         return memberReader.getApplicant(memberId);
@@ -870,24 +920,22 @@ public class RecruitService {
      */
     private ApplicationResponse toApplicationResponse(
             RecruitApplication app,
-            ApplicationResponse.Applicant applicant
-    ) {
+            ApplicationResponse.Applicant applicant) {
         // 리뷰 데이터 조회 (모집자 전용 정책 준수)
         List<MemberReview> allReviews = reviewRepo.findByTargetUserIdOrderByCreatedAtDesc(app.getUserId());
-        
-        Double avgRating = allReviews.isEmpty() ? 0.0 : 
-                allReviews.stream().mapToInt(MemberReview::getRating).average().orElse(0.0);
-        
+
+        Double avgRating = allReviews.isEmpty() ? 0.0
+                : allReviews.stream().mapToInt(MemberReview::getRating).average().orElse(0.0);
+
         int reviewCount = allReviews.size();
-        
+
         // 리뷰 전체 추출
         List<ApplicationResponse.ReviewSummary> recentReviews = allReviews.stream()
                 .map(r -> new ApplicationResponse.ReviewSummary(
                         r.getId(),
                         r.getRating(),
                         r.getContent(),
-                        r.getCreatedAt()
-                ))
+                        r.getCreatedAt()))
                 .collect(Collectors.toList());
 
         return ApplicationResponse.of(
@@ -899,15 +947,14 @@ public class RecruitService {
                 app.getRole(),
                 app.getIntroduction(),
                 splitSkillCsv(app.getRequiredSkills()),
-                app.getContactEmail(),
+                applicant.getContactEmail(),
                 app.getPhoneNumber(),
                 app.getGithubUrl(),
                 app.getStatus(),
                 app.getCreatedAt(),
                 avgRating,
                 reviewCount,
-                recentReviews
-        );
+                recentReviews);
     }
 
     /**
@@ -929,5 +976,49 @@ public class RecruitService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    /**
+     * DTO 변환 및 N+1 최적화 (배치 조회)
+     */
+    private List<RecruitResponse> toResponseList(List<RecruitPost> posts, Long me) {
+        if (posts.isEmpty())
+            return List.of();
+
+        List<Long> postIds = posts.stream().map(RecruitPost::getId).toList();
+
+        // 지원 여부 배치 조회
+        Set<Long> appliedPostIds = (me == null) ? Set.of()
+                : new HashSet<>(appRepo.findAppliedPostIdsByUserIdAndRecruitPostIds(me, postIds));
+
+        // 북마크 여부 배치 조회
+        Set<Long> bookmarkedPostIds = (me == null) ? Set.of()
+                : new HashSet<>(bookmarkRepo.findBookmarkedPostIdsByUserIdAndRecruitPostIds(me, postIds));
+
+        // 총 지원자 수 배치 조회
+        Map<Long, Long> countMap = toCountMap(appRepo.countGroupByRecruitPostIds(postIds));
+
+        // 작성자 정보 배치 조회
+        Set<Long> authorIds = posts.stream().map(RecruitPost::getAuthorUserId).collect(Collectors.toSet());
+        Map<Long, RecruitAuthorResponse> authorMap = memberReader.getAuthors(authorIds);
+
+        return posts.stream().map(post -> {
+            List<String> skills = splitSkillCsv(post.getRequiredSkills());
+            boolean applied = appliedPostIds.contains(post.getId());
+            boolean bookmarked = bookmarkedPostIds.contains(post.getId());
+            long totalApplicants = countMap.getOrDefault(post.getId(), 0L);
+            RecruitAuthorResponse author = authorMap.getOrDefault(post.getAuthorUserId(),
+                    new RecruitAuthorResponse(post.getAuthorUserId(), "Unknown"));
+
+            return RecruitResponse.from(post, skills, applied, bookmarked, totalApplicants, author);
+        }).toList();
+    }
+
+    private Map<Long, Long> toCountMap(List<Object[]> rows) {
+        Map<Long, Long> map = new HashMap<>();
+        for (Object[] row : rows) {
+            map.put((Long) row[0], (Long) row[1]);
+        }
+        return map;
     }
 }

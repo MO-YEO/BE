@@ -77,4 +77,20 @@ public class MemberRecruitReader implements RecruitMemberReader {
                 member.getEmail()
         );
     }
+
+    @Override
+    public java.util.Map<Long, RecruitAuthorResponse> getAuthors(java.util.Collection<Long> memberIds) {
+        if (memberIds == null || memberIds.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+
+        java.util.List<Member> members = memberRepository.findAllById(memberIds);
+        java.util.Map<Long, RecruitAuthorResponse> result = new java.util.HashMap<>();
+
+        for (Member m : members) {
+            result.put(m.getId(), new RecruitAuthorResponse(m.getId(), m.getNickname()));
+        }
+
+        return result;
+    }
 }

@@ -6,6 +6,8 @@ import com.catholic.moyeo.recruit.dto.ApplicationResponse;
 import com.catholic.moyeo.recruit.dto.ApplyStatusResponse;
 import com.catholic.moyeo.recruit.dto.MyAppliedRecruitListResponse;
 import com.catholic.moyeo.recruit.dto.MyAppliedRecruitResponse;
+import com.catholic.moyeo.recruit.dto.ParticipatingRecruitListResponse;
+import com.catholic.moyeo.recruit.dto.ParticipatingRecruitResponse;
 import com.catholic.moyeo.recruit.dto.RecruitApplyRequest;
 import com.catholic.moyeo.recruit.dto.RecruitCreateRequest;
 import com.catholic.moyeo.recruit.dto.RecruitListResponse;
@@ -193,16 +195,14 @@ public class RecruitController {
         String resolvedActivityCategory = firstNonBlank(activityCategory, type);
         String resolvedRecruitCategory = firstNonBlank(recruitCategory, category);
 
-        Page<RecruitResponse> page = recruitService.list(
+        return ResponseEntity.ok(recruitService.list(
                 resolvedActivityCategory,
                 resolvedRecruitCategory,
                 status,
                 keyword,
                 skills,
                 pageable
-        );
-
-        return ResponseEntity.ok(RecruitListResponse.from(page));
+        ));
     }
 
 
@@ -344,8 +344,7 @@ public class RecruitController {
      */
     @GetMapping("/me")
     public ResponseEntity<RecruitListResponse> myPosts(Pageable pageable) {
-        Page<RecruitResponse> page = recruitService.myPosts(pageable);
-        return ResponseEntity.ok(RecruitListResponse.from(page));
+        return ResponseEntity.ok(recruitService.myPosts(pageable));
     }
 
     /**
@@ -359,6 +358,35 @@ public class RecruitController {
     public ResponseEntity<MyAppliedRecruitListResponse> myApplied(Pageable pageable) {
         Page<MyAppliedRecruitResponse> page = recruitService.myApplied(pageable);
         return ResponseEntity.ok(MyAppliedRecruitListResponse.from(page));
+    }
+
+    /**
+     * 참여 중인 모집글 목록 (마감된 프로젝트 중 내가 작성했거나 승인된 글)
+     */
+    @GetMapping("/participating")
+    public ResponseEntity<ParticipatingRecruitListResponse> participating(Pageable pageable) {
+        Page<ParticipatingRecruitResponse> page = recruitService.getParticipatingRecruits(pageable);
+        return ResponseEntity.ok(ParticipatingRecruitListResponse.from(page));
+    }
+
+    /**
+     * 모집글 북마크 토글
+     *
+     * Response:
+     * - true: 북마크 등록됨
+     * - false: 북마크 해제됨
+     */
+    @PostMapping("/{recruitId}/bookmark")
+    public ResponseEntity<Boolean> toggleBookmark(@PathVariable("recruitId") Long recruitId) {
+        return ResponseEntity.ok(recruitService.toggleBookmark(recruitId));
+    }
+
+    /**
+     * 내가 북마크한 모집글 목록 조회
+     */
+    @GetMapping("/bookmarks")
+    public ResponseEntity<RecruitListResponse> bookmarks(Pageable pageable) {
+        return ResponseEntity.ok(recruitService.listBookmarkedRecruits(pageable));
     }
 
     /**

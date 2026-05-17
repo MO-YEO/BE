@@ -1,14 +1,12 @@
 package com.catholic.moyeo.recruit.repository;
 
 import com.catholic.moyeo.recruit.domain.RecruitPost;
-import com.catholic.moyeo.recruit.domain.RecruitPostStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -49,6 +47,4 @@ public interface RecruitPostRepository extends JpaRepository<RecruitPost, Long>,
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from RecruitPost p where p.id = :id")
     Optional<RecruitPost> findByIdForUpdate(@Param("id") Long id);
-
-    List<RecruitPost> findByStatus(RecruitPostStatus status);
 }
