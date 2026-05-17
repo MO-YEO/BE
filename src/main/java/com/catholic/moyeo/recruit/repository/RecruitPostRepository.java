@@ -1,12 +1,14 @@
 package com.catholic.moyeo.recruit.repository;
 
 import com.catholic.moyeo.recruit.domain.RecruitPost;
+import com.catholic.moyeo.recruit.domain.RecruitPostStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -47,4 +49,28 @@ public interface RecruitPostRepository extends JpaRepository<RecruitPost, Long>,
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from RecruitPost p where p.id = :id")
     Optional<RecruitPost> findByIdForUpdate(@Param("id") Long id);
+
+    /**
+     * 상태별 모집글 조회
+     *
+     * 사용처:
+     * - 팀 매칭 추천 기능에서 OPEN 모집글만 조회
+     */
+    List<RecruitPost> findByStatus(RecruitPostStatus status);
+
+    /**
+     * 참여 중인 프로젝트 조회
+     * - 내가 작성한 마감된 모집글
+     * - 내가 지원했고 ACCEPTED 된 마감된 모집글
+     */
+    @Query("SELECT p FROM RecruitPost p WHERE p.status = com.catholic.moyeo.recruit.domain.RecruitPostStatus.CLOSED " +
+            "AND (p.authorUserId = :userId OR p.id IN " +
+            "(SELECT a.recruitPostId FROM RecruitApplication a WHERE a.userId = :userId AND a.status = com.catholic.moyeo.recruit.domain.RecruitApplicationStatus.ACCEPTED))")
+    Page<RecruitPost> findParticipating(@Param("userId") Long userId, Pageable pageable);
+
+    /**
+     * 내가 북마크한 모집글 조회
+     */
+    @Query("SELECT p FROM RecruitPost p JOIN RecruitPostBookmark b ON b.recruitPostId = p.id WHERE b.userId = :userId")
+    Page<RecruitPost> findBookmarkedPostsByUserId(@Param("userId") Long userId, Pageable pageable);
 }
