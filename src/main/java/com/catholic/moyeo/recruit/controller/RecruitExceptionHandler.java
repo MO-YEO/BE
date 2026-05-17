@@ -112,7 +112,13 @@ public class RecruitExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> serverError(Exception e) {
+
+        e.printStackTrace();
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("message", "Internal server error"));
+                .body(Map.of(
+                        "message", e.getMessage(),
+                        "errorType", e.getClass().getSimpleName()
+                ));
     }
 }

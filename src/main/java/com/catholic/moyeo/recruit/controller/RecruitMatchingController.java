@@ -2,6 +2,7 @@ package com.catholic.moyeo.recruit.controller;
 
 
 import com.catholic.moyeo.recruit.dto.RecruitMatchingResponse;
+
 import com.catholic.moyeo.recruit.service.RecruitMatchingService;
 import com.catholic.moyeo.security.AuthUtil;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ public class RecruitMatchingController {
 
     private final RecruitMatchingService recruitMatchingService;
 
+
     @GetMapping("/{recruitPostId}/matching/me")
     public RecruitMatchingResponse getMyMatchingResult(
             @PathVariable Long recruitPostId
@@ -22,4 +24,6 @@ public class RecruitMatchingController {
 
         return recruitMatchingService.getMatchingResult(recruitPostId, memberId);
     }
+
+
 }

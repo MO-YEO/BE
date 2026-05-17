@@ -7,7 +7,7 @@ import java.util.List;
 
 @Getter
 @AllArgsConstructor
-public class RecruitMatchingResponse {
+public class RecruitAiMatchingResponse {
 
     private Long recruitPostId;
     private Long memberId;
@@ -31,6 +31,9 @@ public class RecruitMatchingResponse {
     private List<String> missingSkills;
     private int skillScore;
 
-    // 최종 점수
+    // 최종 매칭 점수
     private int matchingScore;
+
+    // AI 추천 코멘트
+    private String aiComment;
 }
