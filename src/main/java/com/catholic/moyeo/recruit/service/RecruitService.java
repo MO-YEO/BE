@@ -632,6 +632,15 @@ public class RecruitService {
         Long me = AuthUtil.currentMemberId();
 
         Page<RecruitPost> page = postRepo.findParticipating(me, pageable);
+        if (page.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        List<Long> postIds = page.getContent().stream()
+                .map(RecruitPost::getId)
+                .toList();
+
+        Map<Long, Long> countMap = toCountMap(appRepo.countGroupByRecruitPostIds(postIds));
 
         return page.map(post -> {
             // 참여 팀원 ID 목록 추출 (작성자 + 승인된 인원)
@@ -643,10 +652,13 @@ public class RecruitService {
                     RecruitApplicationStatus.ACCEPTED);
             acceptedApps.forEach(app -> participantIds.add(app.getUserId()));
 
+            long totalApplicants = countMap.getOrDefault(post.getId(), 0L);
+
             return ParticipatingRecruitResponse.from(
                     post,
                     splitSkillCsv(post.getRequiredSkills()),
-                    participantIds);
+                    participantIds,
+                    totalApplicants);
         });
     }
 
