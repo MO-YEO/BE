@@ -370,15 +370,19 @@ public class RecruitController {
     }
 
     /**
-     * 모집글 북마크 토글
-     *
-     * Response:
-     * - true: 북마크 등록됨
-     * - false: 북마크 해제됨
+     * 모집글 북마크 추가
      */
     @PostMapping("/{recruitId}/bookmark")
-    public ResponseEntity<Boolean> toggleBookmark(@PathVariable("recruitId") Long recruitId) {
-        return ResponseEntity.ok(recruitService.toggleBookmark(recruitId));
+    public ResponseEntity<Boolean> addBookmark(@PathVariable("recruitId") Long recruitId) {
+        return ResponseEntity.ok(recruitService.addBookmark(recruitId));
+    }
+
+    /**
+     * 모집글 북마크 해제
+     */
+    @DeleteMapping("/{recruitId}/bookmark")
+    public ResponseEntity<Boolean> removeBookmark(@PathVariable("recruitId") Long recruitId) {
+        return ResponseEntity.ok(recruitService.removeBookmark(recruitId));
     }
 
     /**

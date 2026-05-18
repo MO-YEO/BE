@@ -663,10 +663,10 @@ public class RecruitService {
     }
 
     /**
-     * 모집글 북마크 토글
+     * 모집글 북마크 추가
      */
     @Transactional
-    public boolean toggleBookmark(Long recruitId) {
+    public boolean addBookmark(Long recruitId) {
         Long me = AuthUtil.currentMemberId();
 
         if (!postRepo.existsById(recruitId)) {
@@ -674,13 +674,26 @@ public class RecruitService {
         }
 
         Optional<RecruitPostBookmark> existing = bookmarkRepo.findByRecruitPostIdAndUserId(recruitId, me);
-        if (existing.isPresent()) {
-            bookmarkRepo.delete(existing.get());
-            return false;
-        } else {
+        if (existing.isEmpty()) {
             bookmarkRepo.save(new RecruitPostBookmark(recruitId, me));
-            return true;
         }
+        return true;
+    }
+
+    /**
+     * 모집글 북마크 해제
+     */
+    @Transactional
+    public boolean removeBookmark(Long recruitId) {
+        Long me = AuthUtil.currentMemberId();
+
+        if (!postRepo.existsById(recruitId)) {
+            throw new IllegalArgumentException("Recruit not found: " + recruitId);
+        }
+
+        Optional<RecruitPostBookmark> existing = bookmarkRepo.findByRecruitPostIdAndUserId(recruitId, me);
+        existing.ifPresent(bookmarkRepo::delete);
+        return false;
     }
 
     // =========================
