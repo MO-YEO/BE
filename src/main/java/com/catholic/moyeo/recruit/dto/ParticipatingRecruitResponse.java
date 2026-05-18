@@ -12,19 +12,25 @@ public class ParticipatingRecruitResponse {
     private String title;
     private RecruitPostStatus status;
     private List<String> skills;
+    private long applicantCount;
+    private long approvedCount;
+    private Integer totalHeadcount;
     private LocalDate deadline;
     private LocalDateTime createdAt;
     
     // 참여 중인 팀원들의 ID 목록 (리뷰 기능용)
     private List<Long> participantIds;
 
-    public static ParticipatingRecruitResponse from(RecruitPost p, List<String> skills, List<Long> participantIds) {
+    public static ParticipatingRecruitResponse from(RecruitPost p, List<String> skills, List<Long> participantIds, long applicantCount) {
         ParticipatingRecruitResponse r = new ParticipatingRecruitResponse();
         r.recruitId = p.getId();
         r.type = p.getType();
         r.title = p.getTitle();
         r.status = p.getStatus();
         r.skills = skills;
+        r.applicantCount = applicantCount;
+        r.approvedCount = p.getApplicantCount(); // 현재 참여 확정 인원 (작성자 포함)
+        r.totalHeadcount = (int) p.getTotalHeadcount();
         r.deadline = p.getDeadline();
         r.createdAt = p.getCreatedAt();
         r.participantIds = participantIds;
@@ -36,6 +42,9 @@ public class ParticipatingRecruitResponse {
     public String getTitle() { return title; }
     public RecruitPostStatus getStatus() { return status; }
     public List<String> getSkills() { return skills; }
+    public long getApplicantCount() { return applicantCount; }
+    public long getApprovedCount() { return approvedCount; }
+    public Integer getTotalHeadcount() { return totalHeadcount; }
     public LocalDate getDeadline() { return deadline; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public List<Long> getParticipantIds() { return participantIds; }
