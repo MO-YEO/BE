@@ -29,77 +29,72 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WebSecurityConfig {
 
-    private final OAuth2SuccessHandler oAuth2SuccessHandler;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final OAuth2SuccessHandler oAuth2SuccessHandler;
+        private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-        http
-                .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                http
+                                .csrf(csrf -> csrf.disable())
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable())
+                                .formLogin(form -> form.disable())
+                                .httpBasic(basic -> basic.disable())
 
+                                // 401/403 응답 고정
+                                .exceptionHandling(ex -> ex
+                                                // 인증 안됨 -> 401
+                                                .authenticationEntryPoint(
+                                                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                                                // 권한 없음 -> 403
+                                                .accessDeniedHandler((req, res, e) -> res
+                                                                .sendError(HttpStatus.FORBIDDEN.value())))
 
+                                // TODO
+                                // .anyRequest().authenticated()로 바꿔야함
+                                // URL 접근 정책
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers(
+                                                                "/",
+                                                                "/oauth2/**",
+                                                                "/login/**",
+                                                                "/oauth/**",
+                                                                "/oauth/callback",
+                                                                "/swagger-ui/**",
+                                                                "/v3/api-docs/**",
+                                                                "/uploads/**")
+                                                .permitAll()
+                                                .anyRequest().authenticated())
 
-                //  401/403 응답 고정
-                .exceptionHandling(ex -> ex
-                        // 인증 안됨 -> 401
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
-                        // 권한 없음 -> 403
-                        .accessDeniedHandler((req, res, e) -> res.sendError(HttpStatus.FORBIDDEN.value()))
-                )
+                                // OAuth2 로그인 설정
+                                .oauth2Login(oauth -> oauth
+                                                .successHandler(oAuth2SuccessHandler))
 
-                //TODO
-                //.anyRequest().authenticated()로 바꿔야함
-                // URL 접근 정책
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/",
-                                "/oauth2/**",
-                                "/login/**",
-                                "/oauth/**",
-                                "/oauth/callback",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/uploads/**"
-                        ).permitAll()
-                        .anyRequest().authenticated()                )
+                                // JWT 필터 등록
+                                .addFilterBefore(
+                                                jwtAuthenticationFilter,
+                                                UsernamePasswordAuthenticationFilter.class);
 
-                // OAuth2 로그인 설정
-                .oauth2Login(oauth -> oauth
-                        .successHandler(oAuth2SuccessHandler)
-                )
+                return http.build();
+        }
 
-                // JWT 필터 등록
-                .addFilterBefore(
-                        jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                );
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration config = new CorsConfiguration();
+                config.setAllowedOrigins(List.of(
+                                "http://localhost:5173",
+                                "https://weepily-tinklier-marguerita.ngrok-free.dev",
+                                "https://moyeo-fe.vercel.app"));
 
-        return http.build();
-    }
+                config.setAllowedMethods(List.of("*"));
+                config.setAllowedHeaders(List.of("*"));
+                config.setAllowCredentials(true);
 
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "https://weepily-tinklier-marguerita.ngrok-free.dev"
-        ));
-
-        config.setAllowedMethods(List.of("*"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
-
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", config);
+                return source;
+        }
 
 }

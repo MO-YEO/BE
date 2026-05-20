@@ -23,11 +23,14 @@ DB_PASSWORD=moyeo123
 로컬 테스트:
 OAUTH2_REDIRECT_URL=http://localhost:8080/oauth/callback
 
-프론트 연동:
-OAUTH2_REDIRECT_URL=http://localhost:3000/oauth/callback
+프론트 연동 (로컬):
+OAUTH2_REDIRECT_URL=http://localhost:3000/oauth/callback (또는 http://localhost:5173/oauth/callback)
 
-배포:
-OAUTH2_REDIRECT_URL=https://moyeo.com/oauth/callback
+테스트 서버 (ngrok):
+OAUTH2_REDIRECT_URL=https://weepily-tinklier-marguerita.ngrok-free.dev/oauth/callback
+
+실제 배포 서버:
+OAUTH2_REDIRECT_URL=https://moyeo-fe.vercel.app/oauth/callback
 
 
 http://localhost:8080/oauth2/authorization/google
