@@ -5,6 +5,7 @@ import com.catholic.moyeo.security.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -56,6 +57,8 @@ public class WebSecurityConfig {
                                 // .anyRequest().authenticated()로 바꿔야함
                                 // URL 접근 정책
                                 .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                                .requestMatchers(HttpMethod.PATCH, "/api/members/me").permitAll()
                                                 .requestMatchers(
                                                                 "/",
                                                                 "/oauth2/**",
