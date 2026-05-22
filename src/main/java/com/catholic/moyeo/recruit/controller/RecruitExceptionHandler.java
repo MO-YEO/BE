@@ -1,5 +1,6 @@
 package com.catholic.moyeo.recruit.controller;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -32,6 +33,18 @@ import java.util.Map;
  */
 @RestControllerAdvice(basePackages = "com.catholic.moyeo.recruit")
 public class RecruitExceptionHandler {
+
+    /**
+     * 리소스 없음 -> 404
+     *
+     * 예:
+     * - 존재하지 않는 recruitId 단건 조회
+     */
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> notFound(EntityNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("message", e.getMessage()));
+    }
 
     /**
      * 잘못된 값 / 정책 위반 -> 400
