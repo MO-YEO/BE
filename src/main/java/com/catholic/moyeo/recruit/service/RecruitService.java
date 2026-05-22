@@ -20,6 +20,7 @@ import com.catholic.moyeo.recruit.dto.RecruitUpdateRequest;
 import com.catholic.moyeo.recruit.repository.RecruitApplicationRepository;
 import com.catholic.moyeo.recruit.repository.RecruitPostRepository;
 import com.catholic.moyeo.security.AuthUtil;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -251,6 +252,23 @@ public class RecruitService {
 
         List<RecruitResponse> responses = toResponseList(page.getContent(), me);
         return RecruitListResponse.from(responses, page);
+    }
+
+    /**
+     * 모집글 단건 상세 조회
+     *
+     * 정책:
+     * - 존재하지 않는 recruitId -> 404
+     * - appliedByMe / bookmarkedByMe / author 조회는 toResponseList 재사용
+     */
+    @Transactional(readOnly = true)
+    public RecruitResponse getRecruit(Long recruitId) {
+        Long me = AuthUtil.currentMemberId();
+
+        RecruitPost post = postRepo.findById(recruitId)
+                .orElseThrow(() -> new EntityNotFoundException("Recruit not found: " + recruitId));
+
+        return toResponseList(List.of(post), me).get(0);
     }
 
     // =========================

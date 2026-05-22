@@ -10,6 +10,7 @@ import com.catholic.moyeo.recruit.dto.ParticipatingRecruitListResponse;
 import com.catholic.moyeo.recruit.dto.ParticipatingRecruitResponse;
 import com.catholic.moyeo.recruit.dto.RecruitApplyRequest;
 import com.catholic.moyeo.recruit.dto.RecruitCreateRequest;
+import com.catholic.moyeo.recruit.dto.RecruitDetailResponse;
 import com.catholic.moyeo.recruit.dto.RecruitListResponse;
 import com.catholic.moyeo.recruit.dto.RecruitResponse;
 import com.catholic.moyeo.recruit.dto.RecruitStatusUpdateRequest;
@@ -205,7 +206,17 @@ public class RecruitController {
         ));
     }
 
-
+    /**
+     * 모집글 단건 상세 조회
+     *
+     * Response:
+     * - { "recruit": { ...RecruitResponse 필드... } }
+     * - GET /api/recruits 의 recruits[] 아이템과 동일한 shape
+     */
+    @GetMapping("/{recruitId}")
+    public ResponseEntity<RecruitDetailResponse> getRecruit(@PathVariable("recruitId") Long recruitId) {
+        return ResponseEntity.ok(RecruitDetailResponse.from(recruitService.getRecruit(recruitId)));
+    }
 
     /**
      * 모집글 생성 (로그인 필요)
