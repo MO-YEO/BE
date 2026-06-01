@@ -93,4 +93,26 @@ public class MemberRecruitReader implements RecruitMemberReader {
 
         return result;
     }
+
+    /**
+     * 여러 멤버의 닉네임을 한 번에 조회한다.
+     *
+     * @param memberIds 조회할 memberId 컬렉션
+     * @return memberId -> nickname 매핑
+     */
+    @Override
+    public java.util.Map<Long, String> getNicknames(java.util.Collection<Long> memberIds) {
+        if (memberIds == null || memberIds.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+
+        java.util.List<Member> members = memberRepository.findAllById(memberIds);
+        java.util.Map<Long, String> result = new java.util.HashMap<>();
+
+        for (Member m : members) {
+            result.put(m.getId(), m.getNickname());
+        }
+
+        return result;
+    }
 }

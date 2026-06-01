@@ -660,15 +660,35 @@ public class RecruitService {
 
         Map<Long, Long> countMap = toCountMap(appRepo.countGroupByRecruitPostIds(postIds));
 
-        return page.map(post -> {
-            // 참여 팀원 ID 목록 추출 (작성자 + 승인된 인원)
-            List<Long> participantIds = new ArrayList<>();
-            participantIds.add(post.getAuthorUserId());
+        // 승인된 지원자 전체를 한 번에 조회 후 postId 기준으로 그룹핑
+        Map<Long, List<Long>> acceptedUserIdsByPostId = appRepo
+                .findByRecruitPostIdInAndStatus(postIds, RecruitApplicationStatus.ACCEPTED)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        RecruitApplication::getRecruitPostId,
+                        Collectors.mapping(RecruitApplication::getUserId, Collectors.toList())));
 
-            List<RecruitApplication> acceptedApps = appRepo.findByRecruitPostIdAndStatus(
-                    post.getId(),
-                    RecruitApplicationStatus.ACCEPTED);
-            acceptedApps.forEach(app -> participantIds.add(app.getUserId()));
+        // 참여자 ID 수집 (작성자 + 승인된 인원, 본인 제외) & 닉네임 배치 조회
+        Set<Long> allParticipantIds = new HashSet<>();
+        for (RecruitPost post : page.getContent()) {
+            if (!post.getAuthorUserId().equals(me)) {
+                allParticipantIds.add(post.getAuthorUserId());
+            }
+            acceptedUserIdsByPostId.getOrDefault(post.getId(), List.of()).stream()
+                    .filter(id -> !id.equals(me))
+                    .forEach(allParticipantIds::add);
+        }
+        Map<Long, String> nicknameMap = memberReader.getNicknames(allParticipantIds);
+
+        return page.map(post -> {
+            // 참여 팀원 ID 목록 (작성자 + 승인된 인원, 본인 제외)
+            List<Long> participantIds = new ArrayList<>();
+            if (!post.getAuthorUserId().equals(me)) {
+                participantIds.add(post.getAuthorUserId());
+            }
+            acceptedUserIdsByPostId.getOrDefault(post.getId(), List.of()).stream()
+                    .filter(id -> !id.equals(me))
+                    .forEach(participantIds::add);
 
             long totalApplicants = countMap.getOrDefault(post.getId(), 0L);
 
@@ -676,6 +696,7 @@ public class RecruitService {
                     post,
                     splitSkillCsv(post.getRequiredSkills()),
                     participantIds,
+                    nicknameMap,
                     totalApplicants);
         });
     }

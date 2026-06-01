@@ -41,4 +41,12 @@ public interface RecruitMemberReader {
      * 여러 작성자 정보를 한 번에 조회한다. (N+1 방지)
      */
     java.util.Map<Long, RecruitAuthorResponse> getAuthors(java.util.Collection<Long> memberIds);
+
+    /**
+     * 여러 멤버의 닉네임을 한 번에 조회한다. (N+1 방지)
+     *
+     * @param memberIds 조회할 memberId 컬렉션
+     * @return memberId -> nickname 매핑
+     */
+    java.util.Map<Long, String> getNicknames(java.util.Collection<Long> memberIds);
 }

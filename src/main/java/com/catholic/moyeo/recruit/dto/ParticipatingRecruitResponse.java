@@ -5,6 +5,8 @@ import com.catholic.moyeo.recruit.domain.RecruitPostStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ParticipatingRecruitResponse {
     private Long recruitId;
@@ -21,7 +23,10 @@ public class ParticipatingRecruitResponse {
     // 참여 중인 팀원들의 ID 목록 (리뷰 기능용)
     private List<Long> participantIds;
 
-    public static ParticipatingRecruitResponse from(RecruitPost p, List<String> skills, List<Long> participantIds, long applicantCount) {
+    // 참여 중인 팀원들의 닉네임 목록
+    private List<String> participantNicknames;
+
+    public static ParticipatingRecruitResponse from(RecruitPost p, List<String> skills, List<Long> participantIds, Map<Long, String> nicknameMap, long applicantCount) {
         ParticipatingRecruitResponse r = new ParticipatingRecruitResponse();
         r.recruitId = p.getId();
         r.type = p.getType();
@@ -34,6 +39,9 @@ public class ParticipatingRecruitResponse {
         r.deadline = p.getDeadline();
         r.createdAt = p.getCreatedAt();
         r.participantIds = participantIds;
+        r.participantNicknames = participantIds.stream()
+                .map(id -> nicknameMap.getOrDefault(id, "Unknown"))
+                .collect(Collectors.toList());
         return r;
     }
 
@@ -48,4 +56,5 @@ public class ParticipatingRecruitResponse {
     public LocalDate getDeadline() { return deadline; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public List<Long> getParticipantIds() { return participantIds; }
+    public List<String> getParticipantNicknames() { return participantNicknames; }
 }
