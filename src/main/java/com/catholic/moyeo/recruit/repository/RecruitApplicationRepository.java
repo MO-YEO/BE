@@ -56,6 +56,11 @@ public interface RecruitApplicationRepository extends JpaRepository<RecruitAppli
     List<RecruitApplication> findByRecruitPostIdAndStatus(Long recruitPostId, com.catholic.moyeo.recruit.domain.RecruitApplicationStatus status);
 
     /**
+     * 여러 모집글의 특정 상태인 지원 목록을 한 번에 조회 (배치 처리용, N+1 방지)
+     */
+    List<RecruitApplication> findByRecruitPostIdInAndStatus(List<Long> recruitPostIds, com.catholic.moyeo.recruit.domain.RecruitApplicationStatus status);
+
+    /**
      * 특정 사용자가 지원한 모집글 ID 목록 조회 (배치 처리용)
      */
     @Query("SELECT a.recruitPostId FROM RecruitApplication a WHERE a.userId = :userId AND a.recruitPostId IN :recruitPostIds")
