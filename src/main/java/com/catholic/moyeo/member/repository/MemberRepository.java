@@ -16,7 +16,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     Optional<Member> findByEmail(String email);
 
-    Page<Member> findByTeamProfileRegisteredTrue(Pageable pageable);
+    Page<Member> findByTeamProfileRegisteredTrueAndDeletedFalse(Pageable pageable);
 
     @Query("""
         select distinct m
@@ -25,6 +25,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
         join TechStack ts on mts.techStack = ts
         where ts.name = :tech
         and m.teamProfileRegistered = true
+        and m.deleted = false
     """)
     Page<Member> findByTechStack(@Param("tech") String tech, Pageable pageable);
 
@@ -34,6 +35,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
         join MemberActivityCategory mac on mac.member = m
         where mac.activityCategory = :activityCategory
         and m.teamProfileRegistered = true
+        and m.deleted = false
     """)
     Page<Member> findByActivityCategory(@Param("activityCategory") ActivityCategory activityCategory,
                                         Pageable pageable);
