@@ -89,4 +89,11 @@ public class MemberController {
         Long userId = (Long) authentication.getPrincipal();
         return memberService.getMyBookmarks(userId);
     }
+
+    // 회원 탈퇴
+    @DeleteMapping("/me")
+    public void withdrawMember(Authentication authentication) {
+        Long memberId = (Long) authentication.getPrincipal();
+        memberService.withdrawMember(memberId);
+    }
 }

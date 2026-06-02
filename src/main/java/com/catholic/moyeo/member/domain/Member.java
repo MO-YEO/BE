@@ -26,19 +26,19 @@ public class Member {
     private Long id;
 
     @Column(nullable = false, length = 20)
-    private String provider; // google
+    private String provider;
 
     @Column(name = "provider_sub", nullable = false, length = 255)
-    private String providerSub; // 구글 subject
+    private String providerSub;
 
     @Column(nullable = false, length = 255)
-    private String email; // 로그인용 이메일
+    private String email;
 
     @Column(name = "contact_email", length = 255)
-    private String contactEmail; // 연락용 이메일
+    private String contactEmail;
 
     @Column(name = "phone_number", length = 20)
-    private String phoneNumber; // 전화번호
+    private String phoneNumber;
 
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
@@ -68,6 +68,14 @@ public class Member {
 
     @Column(name = "team_profile_registered", nullable = false)
     private boolean teamProfileRegistered = false;
+
+    // 추가
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    // 추가
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     public void registerTeamProfile() {
         this.teamProfileRegistered = true;
@@ -104,5 +112,20 @@ public class Member {
         if (githubUrl != null) this.githubUrl = githubUrl;
         if (contactEmail != null) this.contactEmail = contactEmail;
         if (phoneNumber != null) this.phoneNumber = phoneNumber;
+    }
+
+    // 추가
+    public void withdraw() {
+        this.deleted = true;
+        this.deletedAt = LocalDateTime.now();
+
+        this.nickname = "탈퇴한 사용자";
+        this.contactEmail = null;
+        this.phoneNumber = null;
+        this.role = null;
+        this.intro = null;
+        this.githubUrl = null;
+        this.profileImageUrl = null;
+        this.teamProfileRegistered = false;
     }
 }

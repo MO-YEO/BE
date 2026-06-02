@@ -12,4 +12,8 @@ public interface MemberBookmarkRepository extends JpaRepository<MemberBookmark, 
     void deleteByUserAndTarget(Member user, Member target);
 
     List<MemberBookmark> findByUser(Member user);
+
+    void deleteByUser(Member user);
+
+    void deleteByTarget(Member target);
 }
