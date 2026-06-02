@@ -21,7 +21,8 @@ import java.io.IOException;
  * 2. 사용자 정보(OIDC) 검증
  * 3. 학교 이메일 도메인 검증
  * 4. 사용자 DB 조회 또는 신규 생성
- * 5. JWT Access Token 발급
+ * 5. 탈퇴 회원이면 복구
+ * 6. JWT Access Token 발급
  */
 @Component
 @RequiredArgsConstructor
@@ -53,10 +54,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             return;
         }
 
-
         String email = oidcUser.getEmail();
         String sub = oidcUser.getSubject();
-        Boolean verified = oidcUser.getEmailVerified();  // 구글 기준 이메일 인증 여부 (메타 정보)
+        Boolean verified = oidcUser.getEmailVerified();  // 구글 기준 이메일 인증 여부
 
         // 필수 정보 누락 시 로그인 실패 처리
         if (email == null || sub == null) {
@@ -82,6 +82,18 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 .orElseGet(() -> memberRepository.save(
                         Member.createGoogle(sub, email, verified != null && verified)
                 ));
+
+        /**
+         * 탈퇴 회원 재가입/복구 처리
+         *
+         * 회원 탈퇴 시 app_user를 실제 삭제하지 않고 deleted=true로 soft delete 처리함.
+         * 같은 구글 계정으로 다시 로그인하면 기존 회원 row가 조회되므로,
+         * deleted=true 상태라면 restore()로 복구한 뒤 토큰을 발급함.
+         */
+        if (member.isDeleted()) {
+            member.restore();
+            memberRepository.save(member);
+        }
 
         // 로그인 성공 사용자에 대한 JWT Access Token 발급
         String token = jwtProvider.createAccessToken(member.getId(), member.getEmail());

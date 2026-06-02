@@ -1,5 +1,7 @@
 package com.catholic.moyeo.security;
 
+import com.catholic.moyeo.member.domain.Member;
+import com.catholic.moyeo.member.repository.MemberRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -27,8 +29,11 @@ import java.util.List;
  * 동작 흐름:
  * 1. Authorization 헤더 또는 쿠키에서 JWT 추출
  * 2. JwtProvider를 통해 토큰 검증 및 Claims 파싱
- * 3. Claims 기반으로 Authentication 객체 생성
- * 4. SecurityContextHolder에 인증 정보 저장
+ * 3. Claims에서 memberId 추출
+ * 4. DB에서 회원 조회
+ * 5. 탈퇴 회원이면 인증 차단
+ * 6. 정상 회원이면 Authentication 객체 생성
+ * 7. SecurityContextHolder에 인증 정보 저장
  */
 @Component
 @RequiredArgsConstructor
@@ -36,6 +41,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     // JWT 생성 및 검증 담당 컴포넌트
     private final JwtProvider jwtProvider;
+
+    // 탈퇴 회원인지 확인하기 위해 Member 조회
+    private final MemberRepository memberRepository;
 
     /**
      * 매 요청마다 실행되는 필터 로직
@@ -50,7 +58,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = null;
 
         /**
-         * 1️ Authorization 헤더에서 JWT 추출
+         * 1. Authorization 헤더에서 JWT 추출
          *
          * 형식:
          * Authorization: Bearer {JWT}
@@ -61,9 +69,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         /**
-         * 2⃣ Authorization 헤더가 없을 경우 쿠키에서 JWT 추출
+         * 2. Authorization 헤더가 없을 경우 쿠키에서 JWT 추출
          *
-         * 브라우저 환경에서는 HttpOnly 쿠키 사용
+         * 브라우저 환경에서는 HttpOnly 쿠키 사용 가능
          */
         if (token == null && request.getCookies() != null) {
             for (Cookie c : request.getCookies()) {
@@ -75,7 +83,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         /**
-         * 3️ JWT가 존재하는 경우에만 인증 시도
+         * 3. JWT가 존재하는 경우에만 인증 시도
          */
         if (token != null) {
             try {
@@ -84,6 +92,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // JWT subject에 저장된 사용자 ID
                 Long memberId = Long.valueOf(claims.getSubject());
 
+                /**
+                 * DB에서 회원 조회
+                 *
+                 * JWT 자체가 유효해도 회원이 탈퇴 상태일 수 있음.
+                 * soft delete 방식에서는 app_user row가 남아 있으므로,
+                 * 토큰만 검사하면 탈퇴 회원도 API를 사용할 수 있음.
+                 */
+                Member member = memberRepository.findById(memberId)
+                        .orElse(null);
+
+                /**
+                 * 존재하지 않는 회원이거나 탈퇴 회원이면 인증 차단
+                 */
+                if (member == null || member.isDeleted()) {
+                    SecurityContextHolder.clearContext();
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "탈퇴한 회원입니다.");
+                    return;
+                }
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(memberId, null, List.of());
@@ -95,17 +121,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            }  catch (Exception e) {
-            System.out.println("JWT 인증 실패: " + e.getClass().getSimpleName() + " - " + e.getMessage());
-            SecurityContextHolder.clearContext();
-        }
+            } catch (Exception e) {
+                System.out.println("JWT 인증 실패: "
+                        + e.getClass().getSimpleName()
+                        + " - "
+                        + e.getMessage());
 
-    }
+                SecurityContextHolder.clearContext();
+            }
+        }
 
         // 다음 필터로 요청 전달
         filterChain.doFilter(request, response);
     }
-
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -117,5 +145,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.startsWith("/oauth/")
                 || path.equals("/oauth/callback");
     }
-
 }

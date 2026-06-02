@@ -128,4 +128,13 @@ public class Member {
         this.profileImageUrl = null;
         this.teamProfileRegistered = false;
     }
+
+    public void restore() {
+        this.deleted = false;
+        this.deletedAt = null;
+
+        if (this.email != null && this.email.contains("@")) {
+            this.nickname = this.email.substring(0, this.email.indexOf("@"));
+        }
+    }
 }
