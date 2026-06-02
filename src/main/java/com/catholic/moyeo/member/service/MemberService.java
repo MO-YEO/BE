@@ -285,11 +285,7 @@ public class MemberService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
 
         memberTechStackRepository.deleteByMember(member);
-        memberTechStackRepository.flush();
-
         memberActivityCategoryRepository.deleteByMember(member);
-        memberActivityCategoryRepository.flush();
-
         memberBookmarkRepository.deleteByUser(member);
         memberBookmarkRepository.deleteByTarget(member);
 
