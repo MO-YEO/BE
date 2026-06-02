@@ -15,4 +15,10 @@ public interface ReviewRepository extends JpaRepository<MemberReview, Long> {
 
     // 특정 회원이 받은 모든 리뷰를 생성일 최신순으로 조회
     List<MemberReview> findByTargetUserIdOrderByCreatedAtDesc(Long targetUserId);
+
+    // 회원 탈퇴 시 해당 유저가 작성한 리뷰 전체 삭제
+    void deleteByWriterUserId(Long writerUserId);
+
+    // 회원 탈퇴 시 해당 유저가 받은 리뷰 전체 삭제
+    void deleteByTargetUserId(Long targetUserId);
 }

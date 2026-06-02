@@ -12,4 +12,10 @@ public interface MemberBookmarkRepository extends JpaRepository<MemberBookmark, 
     void deleteByUserAndTarget(Member user, Member target);
 
     List<MemberBookmark> findByUser(Member user);
+
+    // 회원 탈퇴 시 해당 유저가 한 북마크 전체 삭제
+    void deleteByUser(Member user);
+
+    // 회원 탈퇴 시 해당 유저가 대상인 북마크 전체 삭제
+    void deleteByTarget(Member target);
 }

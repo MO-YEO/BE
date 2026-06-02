@@ -4,6 +4,10 @@ import com.catholic.moyeo.common.domain.ActivityCategory;
 import com.catholic.moyeo.member.domain.*;
 import com.catholic.moyeo.member.dto.*;
 import com.catholic.moyeo.member.repository.*;
+import com.catholic.moyeo.recruit.repository.RecruitApplicationRepository;
+import com.catholic.moyeo.recruit.repository.RecruitPostBookmarkRepository;
+import com.catholic.moyeo.recruit.repository.RecruitPostRepository;
+import com.catholic.moyeo.review.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +31,10 @@ public class MemberService {
     private final MemberTechStackRepository memberTechStackRepository;
     private final MemberActivityCategoryRepository memberActivityCategoryRepository;
     private final MemberBookmarkRepository memberBookmarkRepository;
+    private final RecruitPostBookmarkRepository recruitPostBookmarkRepository;
+    private final RecruitApplicationRepository recruitApplicationRepository;
+    private final RecruitPostRepository recruitPostRepository;
+    private final ReviewRepository reviewRepository;
 
     // 기술스택 조회 메서드
     private List<String> getTechStacks(Member member) {
@@ -342,5 +350,54 @@ public class MemberService {
                 getTechStacks(member),
                 getActivityCategories(member)
         );
+    }
+
+    // 회원 탈퇴
+    @Transactional
+    public void withdrawMember(Long memberId) {
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
+
+        // 1. 기술스택 삭제
+        memberTechStackRepository.deleteByMember(member);
+
+        // 2. 활동 카테고리 삭제
+        memberActivityCategoryRepository.deleteByMember(member);
+
+        // 3. 내가 한 멤버 북마크 삭제
+        memberBookmarkRepository.deleteByUser(member);
+
+        // 4. 나를 한 멤버 북마크 삭제
+        memberBookmarkRepository.deleteByTarget(member);
+
+        // 5. 내가 찜한 모집글 북마크 삭제
+        recruitPostBookmarkRepository.deleteByUserId(memberId);
+
+        // 6. 내가 지원한 지원 내역 삭제
+        recruitApplicationRepository.deleteByUserId(memberId);
+
+        // 7. 내가 작성한 모집글에 달린 지원 내역 및 북마크 삭제 (모집글 삭제 전 선행)
+        List<Long> myPostIds = recruitPostRepository.findByAuthorUserId(memberId, PageRequest.of(0, Integer.MAX_VALUE))
+                .map(post -> post.getId())
+                .toList();
+        if (!myPostIds.isEmpty()) {
+            for (Long postId : myPostIds) {
+                recruitApplicationRepository.deleteByRecruitPostId(postId);
+                recruitPostBookmarkRepository.deleteByRecruitPostId(postId);
+            }
+        }
+
+        // 8. 내가 작성한 모집글 삭제
+        recruitPostRepository.deleteByAuthorUserId(memberId);
+
+        // 9. 내가 작성한 리뷰 삭제
+        reviewRepository.deleteByWriterUserId(memberId);
+
+        // 10. 내가 받은 리뷰 삭제
+        reviewRepository.deleteByTargetUserId(memberId);
+
+        // 11. 회원 삭제
+        memberRepository.delete(member);
     }
 }

@@ -7,6 +7,7 @@ import com.catholic.moyeo.member.dto.UpdateMyProfileRequest;
 import com.catholic.moyeo.member.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -88,5 +89,13 @@ public class MemberController {
     public MemberListResponse getMyBookmarks(Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
         return memberService.getMyBookmarks(userId);
+    }
+
+    // 회원 탈퇴
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> withdrawMember(Authentication authentication) {
+        Long memberId = (Long) authentication.getPrincipal();
+        memberService.withdrawMember(memberId);
+        return ResponseEntity.noContent().build();
     }
 }

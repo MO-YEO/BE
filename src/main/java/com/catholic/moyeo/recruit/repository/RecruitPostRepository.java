@@ -73,4 +73,9 @@ public interface RecruitPostRepository extends JpaRepository<RecruitPost, Long>,
      */
     @Query("SELECT p FROM RecruitPost p JOIN RecruitPostBookmark b ON b.recruitPostId = p.id WHERE b.userId = :userId")
     Page<RecruitPost> findBookmarkedPostsByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    /**
+     * 회원 탈퇴 시 해당 유저가 작성한 모집글 전체 삭제
+     */
+    void deleteByAuthorUserId(Long authorUserId);
 }

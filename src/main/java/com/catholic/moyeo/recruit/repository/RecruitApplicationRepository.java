@@ -66,4 +66,14 @@ public interface RecruitApplicationRepository extends JpaRepository<RecruitAppli
      */
     @Query("SELECT a.recruitPostId, COUNT(a) FROM RecruitApplication a WHERE a.recruitPostId IN :recruitPostIds GROUP BY a.recruitPostId")
     List<Object[]> countGroupByRecruitPostIds(@Param("recruitPostIds") List<Long> recruitPostIds);
+
+    /**
+     * 회원 탈퇴 시 해당 유저의 지원 내역 전체 삭제
+     */
+    void deleteByUserId(Long userId);
+
+    /**
+     * 모집글 삭제 시 해당 모집글의 지원 내역 전체 삭제
+     */
+    void deleteByRecruitPostId(Long recruitPostId);
 }
